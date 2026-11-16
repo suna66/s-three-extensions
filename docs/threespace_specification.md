@@ -1,38 +1,37 @@
 # `ThreeSpace` Class Interface Specification
 
 ## 1. Overview
-`ThreeSpace` is a utility wrapper class designed to simplify 3D scene setup, rendering loops, and basic resource management using Three.js (`three/webgpu`). It centrally manages the initialization and lifecycle of the scene, perspective camera, WebGPU renderer, and timer.
+`ThreeSpace` manages a perspective camera, WebGPU renderer, frame timer, and the lifecycle of a `SceneController`. The scene itself is owned by the controller rather than by `ThreeSpace`.
 
-* **Dependency:** `three/webgpu`
+* **Dependencies:** `three/webgpu`, `SceneController`
 * **Export Format:** `export default class ThreeSpace`
 
 ---
 
 ## 2. Default Constants (Internal)
-Default values applied during instance initialization.
 
 | Constant Name | Value | Description |
 | :--- | :--- | :--- |
-| `DEFAULT_FOV` | `75` | Camera field of view (in degrees) |
+| `DEFAULT_FOV` | `75` | Camera field of view (degrees) |
 | `DEFAULT_NEAR` | `0.1` | Camera near clipping plane |
 | `DEFAULT_FAR` | `1000` | Camera far clipping plane |
-| `DEFAULT_START_Z_POSITION` | `10` | Initial Z-axis position of the camera (`(0, 0, 10)`) |
+| `DEFAULT_START_Z_POSITION` | `10` | Initial camera position is `(0, 0, 10)` |
 
 ---
 
 ## 3. Constructor
 
 ### `constructor(canvas: HTMLCanvasElement, width: number, height: number)`
-Creates and initializes the core components of the 3D space (`Scene`, `PerspectiveCamera`, `WebGPURenderer`, and `Timer`).
+Creates a `PerspectiveCamera`, a `WebGPURenderer`, and a `THREE.Timer`. It does not create a scene; a `SceneController` supplies the scene when `start()` is called.
 
 * **Parameters:**
-  * `canvas` (`HTMLCanvasElement`): The target HTML Canvas element for rendering.
-  * `width` (`number`): Initial width of the viewport (in pixels).
-  * `height` (`number`): Initial height of the viewport (in pixels).
+  * `canvas` (`HTMLCanvasElement`): Canvas passed to the renderer.
+  * `width` (`number`): Initial renderer width in pixels and input to the camera aspect ratio.
+  * `height` (`number`): Initial renderer height in pixels and input to the camera aspect ratio.
 * **Initial Behavior:**
-  * Sets the camera position to `(0, 0, 10)`.
-  * Instantiates `WebGPURenderer` with antialiasing enabled (`antialias: true`).
-  * Instantiates `THREE.Timer` and connects it to `document` to handle page visibility changes accurately.
+  * Configures the camera with the defaults above and places it at `(0, 0, 10)`.
+  * Creates `WebGPURenderer` with antialiasing enabled and sets its initial size.
+  * Connects the timer to `document`.
 
 ---
 
@@ -40,114 +39,91 @@ Creates and initializes the core components of the 3D space (`Scene`, `Perspecti
 
 | Property Name | Type | Access | Description |
 | :--- | :--- | :--- | :--- |
-| `camera` | `THREE.PerspectiveCamera` | Read-only | Returns the internal perspective camera instance. |
-| `renderer` | `THREE.WebGPURenderer` | Read-only | Returns the internal WebGPU renderer instance. |
-| `domElement` | `HTMLCanvasElement` | Read-only | Returns the HTML Canvas element used by the renderer (`renderer.domElement`). |
+| `camera` | `THREE.PerspectiveCamera` | Read-only | The internal perspective camera. |
+| `renderer` | `THREE.WebGPURenderer` | Read-only | The internal WebGPU renderer. |
+| `domElement` | `HTMLCanvasElement` | Read-only | The renderer's canvas (`renderer.domElement`). |
 
 ---
 
 ## 5. Methods
 
-### `addScene(mesh: THREE.Mesh): void`
-Adds the specified mesh to the scene.
-
-* **Parameters:**
-  * `mesh` (`THREE.Mesh`): The mesh object to add to the scene.
-* **Returns:** `void`
-
----
-
-### `removeMesh(mesh: THREE.Mesh, disposed?: boolean): void`
-Removes the specified mesh from the scene, with an option to dispose of its GPU resources.
-
-* **Parameters:**
-  * `mesh` (`THREE.Mesh`): The mesh object to remove from the scene.
-  * `disposed` (`boolean`, optional, default: `false`): If `true`, calls `.dispose()` on the mesh's `geometry` and `material` (or all materials if it is an array) to free memory.
-* **Returns:** `void`
-
----
-
 ### `setCameraPosition(x: number, y: number, z: number): void`
-Sets the world coordinates of the camera to the specified position.
+Sets the camera's world position.
 
-* **Parameters:**
-  * `x` (`number`): X-coordinate.
-  * `y` (`number`): Y-coordinate.
-  * `z` (`number`): Z-coordinate.
+* **Parameters:** `x`, `y`, and `z` are the world coordinates.
 * **Returns:** `void`
-
----
-
-### `addGridHelper(size: number, divisions: number): THREE.GridHelper`
-Creates a grid helper on the XZ plane and adds it to the scene.
-
-* **Parameters:**
-  * `size` (`number`): The overall size of the grid.
-  * `divisions` (`number`): The number of divisions across the grid.
-* **Returns:**
-  * `THREE.GridHelper`: The created and added grid helper instance.
 
 ---
 
 ### `resize(width: number, height: number): void`
-Updates the camera's aspect ratio and the renderer's output size when the viewport dimensions change.
+Updates the camera aspect ratio and projection matrix, then updates the renderer size.
 
-* **Parameters:**
-  * `width` (`number`): The new width of the viewport (in pixels).
-  * `height` (`number`): The new height of the viewport (in pixels).
+* **Parameters:** `width` and `height` are the new viewport dimensions in pixels.
 * **Returns:** `void`
 
 ---
 
-### `async start(animation?: (delta: number) => void): Promise<void>`
-Asynchronously initializes the WebGPU renderer and starts the animation loop.
+### `async start(scene: SceneController): Promise<void>`
+Initializes the renderer, initializes and starts the supplied scene controller, then installs the render loop.
 
 * **Parameters:**
-  * `animation` (`(delta: number) => void`, optional): A callback function executed immediately before rendering each frame. The `delta` parameter receives the elapsed time (in seconds) since the previous frame.
+  * `scene` (`SceneController`): Controller that owns the `THREE.Scene` and implements `start()` and `update(delta)`.
 * **Returns:** `Promise<void>`
-* **Notes:** If `delete()` is called before `renderer.init()` resolves, the loop will safely abort without starting.
+* **Frame behavior:** Each frame updates the timer, calls `scene.update(delta)` with elapsed seconds since the previous frame, then renders `scene.scene` with the internal camera.
+* **Notes:** If `delete()` has been called before renderer initialization resolves, `start()` returns without initializing the scene or starting the loop.
 
 ---
 
 ### `delete(): void`
-Disposes of the instance by halting the animation loop, disconnecting the timer, and releasing timer resources.
+Marks the instance as disposed, calls `delete()` on the active scene controller if present, and disconnects and disposes the timer. The installed animation-loop callback checks the disposal flag and stops updating and rendering. The renderer is not explicitly disposed by this method.
 
-* **Parameters:** None
 * **Returns:** `void`
-* **Notes:** Sets the internal disposal flag (`_disposed`) to `true`, stopping any subsequent frame updates and rendering.
 
 ---
 
-## 6. Usage Example
+## 6. SceneController Relationship
+`SceneController` owns the `THREE.Scene` and receives the `ThreeSpace` instance through `init(space)`. It exposes the scene, camera, and canvas, and requires implementations of `start(): void` and `update(delta: number): void`. Mesh helper methods such as `addMesh()` and `removeMesh()` belong to the controller and are protected; they are not public methods of `ThreeSpace`.
+
+---
+
+## 7. Usage Example
 
 ```typescript
 import * as THREE from "three/webgpu";
 import ThreeSpace from "./ThreeSpace";
+import { SceneController } from "./SceneController";
 
-// 1. Initialization
+class SampleScene extends SceneController {
+    private cube: THREE.Mesh | null = null;
+
+    public start(): void {
+        const geometry = new THREE.BoxGeometry(1, 1, 1);
+        const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+        this.cube = new THREE.Mesh(geometry, material);
+        this.addMesh(this.cube);
+    }
+
+    public update(delta: number): void {
+        if (!this.cube) return;
+        this.cube.rotation.x += delta;
+        this.cube.rotation.y += delta;
+    }
+
+    public override delete(): void {
+        if (this.cube) this.removeMesh(this.cube, true);
+    }
+}
+
 const canvas = document.querySelector<HTMLCanvasElement>("#app-canvas")!;
 const space = new ThreeSpace(canvas, window.innerWidth, window.innerHeight);
+const scene = new SampleScene();
 
-// 2. Add objects and helpers
-space.addGridHelper(20, 20);
-
-const geometry = new THREE.BoxGeometry(1, 1, 1);
-const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
-const cube = new THREE.Mesh(geometry, material);
-space.addScene(cube);
-
-// 3. Handle window resize
 window.addEventListener("resize", () => {
     space.resize(window.innerWidth, window.innerHeight);
 });
 
-// 4. Start the animation loop
-space.start((delta) => {
-    cube.rotation.x += 1.0 * delta;
-    cube.rotation.y += 1.0 * delta;
-});
+await space.start(scene);
 
-// 5. Cleanup (e.g., on component unmount)
-// space.removeMesh(cube, true);
+// On teardown:
 // space.delete();
 ```
