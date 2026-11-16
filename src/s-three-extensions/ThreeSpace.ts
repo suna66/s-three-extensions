@@ -12,6 +12,12 @@ export default class ThreeSpace {
     private _timer: THREE.Timer;
     private _disposed: boolean = false;
     private _currentScene: SceneController | null = null;
+    private _nextScene: SceneController | null = null;
+    private _switchScene: boolean = false;
+
+    private _pressKeys: Set<string>;
+    private _handleKeyDown = (e: KeyboardEvent) => this._pressKeys.add(e.code);
+    private _handleKeyUp = (e: KeyboardEvent) => this._pressKeys.delete(e.code);
 
     constructor(canvas: HTMLCanvasElement, width: number, height: number) {
         this._camera = new THREE.PerspectiveCamera(
@@ -29,6 +35,10 @@ export default class ThreeSpace {
 
         this._timer = new THREE.Timer();
         this._timer.connect(document);
+
+        this._pressKeys = new Set();
+        window.addEventListener("keydown", this._handleKeyDown);
+        window.addEventListener("keyup", this._handleKeyUp);
     }
 
     public get camera() {
@@ -41,6 +51,17 @@ export default class ThreeSpace {
 
     public get domElement() {
         return this._renderer.domElement;
+    }
+
+    public isKeyPressed(key: string): boolean {
+        return this._pressKeys.has(key);
+    }
+
+    public setSwitchScene(nextScene: SceneController) {
+        this._nextScene = nextScene;
+        this._nextScene.init(this);
+        this._nextScene.start();
+        this._switchScene = true;
     }
 
     public setCameraPosition(x: number, y: number, z: number) {
@@ -65,6 +86,15 @@ export default class ThreeSpace {
             if (this._disposed) return;
             this._timer.update();
 
+            if (this._switchScene) {
+                if (this._currentScene) {
+                    this._currentScene.delete();
+                }
+                this._currentScene = this._nextScene;
+                this._pressKeys.clear();
+                this._switchScene = false;
+            }
+
             if (this._currentScene) {
                 this._currentScene.update(this._timer.getDelta());
                 this._renderer.render(this._currentScene.scene, this._camera);
@@ -79,6 +109,8 @@ export default class ThreeSpace {
         if (this._currentScene) {
             this._currentScene.delete();
         }
+        window.removeEventListener("keydown", this._handleKeyDown);
+        window.removeEventListener("keyup", this._handleKeyUp);
         this._timer.disconnect();
         this._timer.dispose();
     }

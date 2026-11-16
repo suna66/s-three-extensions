@@ -29,6 +29,16 @@ export abstract class SceneController {
     public abstract update(delta: number): void;
     public delete() {}
 
+    protected switchScene(nextScene: SceneController) {
+        if (this._space) {
+            this._space.setSwitchScene(nextScene);
+        }
+    }
+
+    protected isKeyPressed(key: string): boolean {
+        return this._space?.isKeyPressed(key) ?? false;
+    }
+
     protected addMesh(mesh: THREE.Mesh) {
         this._scene.add(mesh);
     }
