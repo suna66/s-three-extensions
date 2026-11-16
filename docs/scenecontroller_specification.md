@@ -13,7 +13,8 @@
 1. Construct a subclass; the base constructor creates an empty `THREE.Scene`.
 2. `ThreeSpace.start(controller)` initializes the renderer, then calls `controller.init(space)` and `controller.start()`.
 3. For each rendered frame, `ThreeSpace` calls `controller.update(delta)` before rendering `controller.scene` with the associated camera. `delta` is elapsed time in seconds since the previous frame.
-4. `ThreeSpace.delete()` calls `controller.delete()` for the active controller.
+4. A controller can request a scene transition with `switchScene(nextScene)`. The next controller is initialized and started immediately; on the next animation frame, the previous active controller is deleted and the new one becomes active. The pressed-key set is cleared during the transition.
+5. `ThreeSpace.delete()` calls `controller.delete()` for the active controller.
 
 The `camera` and `domElement` getters require `init(space)` to have run. Accessing them before initialization dereferences a `null` space and will fail.
 
@@ -63,6 +64,22 @@ Called before each render while the `ThreeSpace` animation loop is active.
 Optional cleanup hook called by `ThreeSpace.delete()` for the active controller. The base implementation does nothing; subclasses can override it to release their resources.
 
 * **Returns:** `void`
+
+---
+
+### `protected switchScene(nextScene: SceneController): void`
+Requests a transition to another controller through the associated `ThreeSpace`. Does nothing if this controller has not been initialized with a space.
+
+* **Parameters:** `nextScene` is the controller to activate.
+* **Returns:** `void`
+
+---
+
+### `protected isKeyPressed(key: string): boolean`
+Checks whether the given `KeyboardEvent.code` is currently pressed in the associated `ThreeSpace` (for example, `"KeyW"`). Returns `false` if the controller has not been initialized with a space.
+
+* **Parameters:** `key` is a keyboard code, not a character value.
+* **Returns:** `boolean`
 
 ---
 

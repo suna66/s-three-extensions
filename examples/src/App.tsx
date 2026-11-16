@@ -26,8 +26,7 @@ class MainScene extends SceneController {
             this._controls.update(delta);
         }
         if (this.isKeyPressed("Space")) {
-            const sub = new SubScene();
-            this.switchScene(sub);
+            this.loadScene("sub", true);
         }
     }
 
@@ -65,8 +64,7 @@ class SubScene extends SceneController {
             this._controls.update(delta);
         }
         if (this.isKeyPressed("Space")) {
-            const main = new MainScene();
-            this.switchScene(main);
+            this.loadScene("main", true);
         }
     }
 
@@ -88,11 +86,14 @@ function App() {
             window.innerHeight,
         );
         window.addEventListener("resize", () => {
-            threeSpace.resize(window.innerWidth, innerHeight);
+            threeSpace.resize(window.innerWidth, window.innerHeight);
         });
 
         const mainScene = new MainScene();
-        threeSpace.start(mainScene);
+        const subScene = new SubScene();
+        threeSpace.addScene("sub", subScene);
+        threeSpace.addScene("main", mainScene); 
+        threeSpace.start("main");
 
         return () => {
             threeSpace.delete();

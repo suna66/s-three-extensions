@@ -6,6 +6,12 @@ const DEFAULT_NEAR = 0.1;
 const DEFAULT_FAR = 1000;
 const DEFAULT_START_Z_POSITION = 10;
 
+interface SwichSceneInfo {
+    scene: SceneController | null;
+    deleteFlag: boolean;
+    switchScene: boolean;
+}
+
 export default class ThreeSpace {
     private _camera: THREE.PerspectiveCamera;
     private _renderer: THREE.WebGPURenderer;
@@ -13,7 +19,8 @@ export default class ThreeSpace {
     private _disposed: boolean = false;
     private _currentScene: SceneController | null = null;
     private _nextScene: SceneController | null = null;
-    private _switchScene: boolean = false;
+    private _switchSceneInfo: SwichSceneInfo;
+    private _sceneStack: Map<string, SceneController>;
 
     private _pressKeys: Set<string>;
     private _handleKeyDown = (e: KeyboardEvent) => this._pressKeys.add(e.code);
@@ -37,6 +44,12 @@ export default class ThreeSpace {
         this._timer.connect(document);
 
         this._pressKeys = new Set();
+        this._sceneStack = new Map();
+        this._switchSceneInfo = {
+            scene: null,
+            deleteFlag: false,
+            switchScene: false,
+        };
         window.addEventListener("keydown", this._handleKeyDown);
         window.addEventListener("keyup", this._handleKeyUp);
     }
@@ -57,11 +70,18 @@ export default class ThreeSpace {
         return this._pressKeys.has(key);
     }
 
-    public setSwitchScene(nextScene: SceneController) {
+    public addScene(key: string, scene: SceneController) {
+        scene.init(this);
+        this._sceneStack.set(key, scene);
+    }
+
+    public loadScene(key: string, isDelete: boolean = true) {
+        const nextScene = this._sceneStack.get(key);
+        if (!nextScene) return;
         this._nextScene = nextScene;
-        this._nextScene.init(this);
         this._nextScene.start();
-        this._switchScene = true;
+        this._switchSceneInfo.switchScene = true;
+        this._switchSceneInfo.deleteFlag = isDelete;
     }
 
     public setCameraPosition(x: number, y: number, z: number) {
@@ -74,25 +94,31 @@ export default class ThreeSpace {
         this._renderer.setSize(width, height);
     }
 
-    public async start(scene: SceneController) {
+    public async start(startScene: string) {
         await this._renderer.init();
         if (this._disposed) return;
 
-        this._currentScene = scene;
-        this._currentScene.init(this);
+        this._currentScene = this._sceneStack.get(startScene) ?? null;
+        if (!this._currentScene) return;
+
         this._currentScene.start();
 
         const _animate = () => {
             if (this._disposed) return;
             this._timer.update();
 
-            if (this._switchScene) {
+            if (this._switchSceneInfo.switchScene) {
                 if (this._currentScene) {
-                    this._currentScene.delete();
+                    if (this._switchSceneInfo.deleteFlag) {
+                        this._currentScene.delete();
+                    } else {
+                        this._currentScene.stop();
+                    }
                 }
                 this._currentScene = this._nextScene;
                 this._pressKeys.clear();
-                this._switchScene = false;
+                this._switchSceneInfo.deleteFlag = false;
+                this._switchSceneInfo.switchScene = false;
             }
 
             if (this._currentScene) {

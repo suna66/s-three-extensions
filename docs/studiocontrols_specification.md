@@ -1,7 +1,7 @@
 # `StudioControls` Class Interface Specification
 
 ## 1. Overview
-`StudioControls` is a camera controller class built on top of Three.js's `OrbitControls`, designed to provide viewport navigation similar to 3D DCC tools and game engines (such as Unreal Engine or Unity). In addition to standard panning, it supports fly-through (walk-through) navigation triggered by holding down the right mouse button or the `Alt` key.
+`StudioControls` is a camera controller class built on top of Three.js's `OrbitControls`, designed to provide viewport navigation similar to 3D DCC tools and game engines (such as Unreal Engine or Unity). In addition to standard panning, it supports fly-through (walk-through) navigation triggered by holding down the right mouse button or the left `Alt` key.
 
 * **Dependencies:** `three`, `three/addons/controls/OrbitControls.js`
 * **Export Format:** `export default class StudioControls`
@@ -64,7 +64,7 @@ Initializes `OrbitControls`, sets the initial orbit target, and registers pointe
 ## 5. Methods
 
 ### `setDamping(factor?: number): void`
-Enables camera damping (inertia) and sets the damping factor.
+Enables OrbitControls damping (inertia) and sets its damping factor. This applies to OrbitControls-managed movement, not the controller's direct keyboard or right-drag camera changes.
 
 * **Parameters:**
   * `factor` (`number`, optional, default: `0.5`): The damping inertia factor (`OrbitControls.dampingFactor`). Smaller values result in smoother, longer deceleration.
@@ -100,25 +100,38 @@ Calls `removeEventListener` for the registered pointer, context-menu, keyboard, 
 ## 6. Usage Example
 
 ```typescript
-import ThreeSpace from "./ThreeSpace";
+import { SceneController } from "./SceneController";
 import StudioControls from "./StudioControls";
+import ThreeSpace from "./ThreeSpace";
 
-// 1. Initialize ThreeSpace and StudioControls
+class ControlledScene extends SceneController {
+  private controls: StudioControls | null = null;
+
+  public start(): void {
+    this.controls = new StudioControls(this.camera, this.domElement);
+    this.controls.cameraSpeed = 8;
+    this.controls.rotateSpeed = 2.0;
+    this.controls.setDamping(0.1);
+  }
+
+  public update(delta: number): void {
+    this.controls?.update(delta);
+  }
+
+  public override delete(): void {
+    this.controls?.dispose();
+  }
+}
+
 const canvas = document.querySelector<HTMLCanvasElement>("#app-canvas")!;
 const space = new ThreeSpace(canvas, window.innerWidth, window.innerHeight);
-const controls = new StudioControls(space.camera, space.domElement);
 
-// 2. Configure options (optional)
-controls.cameraSpeed = 8;
-controls.rotateSpeed = 2.0;
-controls.setDamping(0.1);
-
-// 3. Update inside the animation loop
-space.start((delta) => {
-    controls.update(delta);
+window.addEventListener("resize", () => {
+  space.resize(window.innerWidth, window.innerHeight);
 });
 
-// 4. Cleanup on unmount/disposal
-// controls.dispose();
+await space.start(new ControlledScene());
+
+// On teardown:
 // space.delete();
 ```

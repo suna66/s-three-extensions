@@ -27,11 +27,12 @@ export abstract class SceneController {
 
     public abstract start(): void;
     public abstract update(delta: number): void;
+    public stop() {}
     public delete() {}
 
-    protected switchScene(nextScene: SceneController) {
+    protected loadScene(key: string, isDelete: boolean = true) {
         if (this._space) {
-            this._space.setSwitchScene(nextScene);
+            this._space.loadScene(key, isDelete);
         }
     }
 

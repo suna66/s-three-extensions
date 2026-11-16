@@ -32,6 +32,7 @@ Creates a `PerspectiveCamera`, a `WebGPURenderer`, and a `THREE.Timer`. It does 
   * Configures the camera with the defaults above and places it at `(0, 0, 10)`.
   * Creates `WebGPURenderer` with antialiasing enabled and sets its initial size.
   * Connects the timer to `document`.
+  * Registers window `keydown` and `keyup` listeners to track pressed `KeyboardEvent.code` values.
 
 ---
 
@@ -46,6 +47,19 @@ Creates a `PerspectiveCamera`, a `WebGPURenderer`, and a `THREE.Timer`. It does 
 ---
 
 ## 5. Methods
+
+### `isKeyPressed(key: string): boolean`
+Reports whether the specified keyboard code is currently in the pressed-key set. Pass a `KeyboardEvent.code` value such as `"KeyW"` or `"ArrowUp"`.
+
+* **Returns:** `true` when the key is pressed; otherwise `false`.
+
+---
+
+### `setSwitchScene(nextScene: SceneController): void`
+Schedules a controller to replace the current scene. The incoming controller is initialized with this `ThreeSpace` and its `start()` method is called immediately. On the next animation frame, the current controller is deleted, the incoming controller becomes active, and the pressed-key set is cleared. The new controller then receives frame updates and rendering.
+
+* **Parameters:** `nextScene` is the controller to activate.
+* **Returns:** `void`
 
 ### `setCameraPosition(x: number, y: number, z: number): void`
 Sets the camera's world position.
@@ -69,13 +83,13 @@ Initializes the renderer, initializes and starts the supplied scene controller, 
 * **Parameters:**
   * `scene` (`SceneController`): Controller that owns the `THREE.Scene` and implements `start()` and `update(delta)`.
 * **Returns:** `Promise<void>`
-* **Frame behavior:** Each frame updates the timer, calls `scene.update(delta)` with elapsed seconds since the previous frame, then renders `scene.scene` with the internal camera.
+* **Frame behavior:** Each frame updates the timer, applies any pending scene switch, calls the active controller's `update(delta)` with elapsed seconds since the previous frame, then renders its `scene` with the internal camera.
 * **Notes:** If `delete()` has been called before renderer initialization resolves, `start()` returns without initializing the scene or starting the loop.
 
 ---
 
 ### `delete(): void`
-Marks the instance as disposed, calls `delete()` on the active scene controller if present, and disconnects and disposes the timer. The installed animation-loop callback checks the disposal flag and stops updating and rendering. The renderer is not explicitly disposed by this method.
+Marks the instance as disposed, calls `delete()` on the active scene controller if present, removes the window keyboard listeners, and disconnects and disposes the timer. The installed animation-loop callback checks the disposal flag and stops updating and rendering. The renderer is not explicitly disposed by this method.
 
 * **Returns:** `void`
 
