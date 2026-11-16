@@ -6,7 +6,8 @@ const DEFAULT_NEAR = 0.1;
 const DEFAULT_FAR = 1000;
 const DEFAULT_START_Z_POSITION = 10;
 
-interface SwichSceneInfo {
+interface SwitchSceneInfo {
+    key: string;
     scene: SceneController | null;
     deleteFlag: boolean;
     switchScene: boolean;
@@ -18,8 +19,9 @@ export default class ThreeSpace {
     private _timer: THREE.Timer;
     private _disposed: boolean = false;
     private _currentScene: SceneController | null = null;
+    private _currentSceneKey: string = "";
     private _nextScene: SceneController | null = null;
-    private _switchSceneInfo: SwichSceneInfo;
+    private _switchSceneInfo: SwitchSceneInfo;
     private _sceneStack: Map<string, SceneController>;
 
     private _pressKeys: Set<string>;
@@ -46,6 +48,7 @@ export default class ThreeSpace {
         this._pressKeys = new Set();
         this._sceneStack = new Map();
         this._switchSceneInfo = {
+            key: "",
             scene: null,
             deleteFlag: false,
             switchScene: false,
@@ -75,13 +78,15 @@ export default class ThreeSpace {
         this._sceneStack.set(key, scene);
     }
 
-    public loadScene(key: string, isDelete: boolean = true) {
+    public loadScene(key: string, isDelete: boolean = true): boolean {
         const nextScene = this._sceneStack.get(key);
-        if (!nextScene) return;
+        if (!nextScene) return false;
         this._nextScene = nextScene;
         this._nextScene.start();
         this._switchSceneInfo.switchScene = true;
         this._switchSceneInfo.deleteFlag = isDelete;
+        this._switchSceneInfo.key = key;
+        return true;
     }
 
     public setCameraPosition(x: number, y: number, z: number) {
@@ -100,6 +105,7 @@ export default class ThreeSpace {
 
         this._currentScene = this._sceneStack.get(startScene) ?? null;
         if (!this._currentScene) return;
+        this._currentSceneKey = startScene;
 
         this._currentScene.start();
 
@@ -111,11 +117,13 @@ export default class ThreeSpace {
                 if (this._currentScene) {
                     if (this._switchSceneInfo.deleteFlag) {
                         this._currentScene.delete();
+                        this._sceneStack.delete(this._currentSceneKey);
                     } else {
                         this._currentScene.stop();
                     }
                 }
                 this._currentScene = this._nextScene;
+                this._currentSceneKey = this._switchSceneInfo.key;
                 this._pressKeys.clear();
                 this._switchSceneInfo.deleteFlag = false;
                 this._switchSceneInfo.switchScene = false;
