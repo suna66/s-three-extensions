@@ -38,61 +38,119 @@ The source barrel at `src/s-three-extensions/index.ts` exports `ThreeWorld`, `St
 
 ## Quick Start
 
-Create a `SceneController` subclass, register it with `ThreeWorld.addScene()`, then start the world with that scene's key. `StudioControls` should be created after the controller has been initialized, because it needs the controller's camera and canvas.
+This example switches between a basic scene and a physics scene with `Space`. `IntegrateObject` keeps each mesh together with its optional physics body. `StudioControls` is created from the initialized controller's camera and canvas.
 
 ```typescript
-import * as THREE from "three/webgpu";
-import { SceneController, StudioControls, ThreeWorld } from "./src/s-three-extensions";
+import * as THREE from "three";
+import {
+  IntegrateObject,
+  PhysicsWorld,
+  SceneController,
+  StudioControls,
+  ThreeWorld,
+} from "./src/s-three-extensions";
 
-class SampleScene extends SceneController {
-    private controls: StudioControls | null = null;
-    private cube: THREE.Mesh | null = null;
+class MainScene extends SceneController {
+  private _controls: StudioControls | null = null;
+  private _cube: IntegrateObject | null = null;
 
     public start(): void {
-        this.controls = new StudioControls(this.camera, this.domElement);
-        this.controls.cameraSpeed = 8;
-        this.controls.setDamping(0.1);
-
-        const geometry = new THREE.BoxGeometry(1, 1, 1);
-        const material = new THREE.MeshBasicMaterial({ color: 0x00ff88 });
-        this.cube = new THREE.Mesh(geometry, material);
-        this.addMesh(this.cube);
+    this._cube = new IntegrateObject(() => {
+      const mesh = new THREE.Mesh(
+        new THREE.BoxGeometry(),
+        new THREE.MeshNormalMaterial(),
+      );
+      this.addMesh(mesh);
+      return mesh;
+    });
+    this._controls = new StudioControls(this.camera, this.domElement);
     }
 
     public update(delta: number): void {
-        this.controls?.update(delta);
-        if (this.cube) {
-            this.cube.rotation.x += delta;
-            this.cube.rotation.y += delta;
-        }
+    this._controls?.update(delta);
+    if (this.isKeyPressed("Space")) this.loadScene("physics", false);
     }
 
     public override delete(): void {
-        this.controls?.dispose();
-      if (this.cube) {
-        this.removeMesh(this.cube);
-        this.cube.geometry.dispose();
-        const materials = Array.isArray(this.cube.material)
-          ? this.cube.material
-          : [this.cube.material];
-        materials.forEach((material) => material.dispose());
-      }
+    this._controls?.dispose();
+    if (this._cube?.mesh) this.removeMesh(this._cube.mesh);
+    this._cube?.dispose(true);
+  }
+}
+
+class PhysicsScene extends SceneController {
+  private _physicsWorld: PhysicsWorld | null = null;
+  private _controls: StudioControls | null = null;
+  private _sphere: IntegrateObject | null = null;
+  private _ground: IntegrateObject | null = null;
+
+  public async start(): Promise<void> {
+    this._physicsWorld = await PhysicsWorld.create();
+
+    this._sphere = new IntegrateObject(() => {
+      const mesh = new THREE.Mesh(
+        new THREE.SphereGeometry(1, 32, 32),
+        new THREE.MeshNormalMaterial(),
+      );
+      this.addMesh(mesh);
+      return mesh;
+    });
+
+    this._ground = new IntegrateObject(() => {
+      const mesh = new THREE.Mesh(
+        new THREE.PlaneGeometry(10, 10),
+        new THREE.MeshBasicMaterial({ color: 0xff0000 }),
+      );
+      mesh.rotation.x = -Math.PI / 2;
+      mesh.position.y = -3;
+      this.addMesh(mesh);
+      return mesh;
+    });
+
+    this._ground.setPhysicalBody((mesh) =>
+      this._physicsWorld!.addBody(mesh, {
+        type: "fixed",
+        colliders: [{ shape: { type: "box", halfExtents: [10, 10, 0.1] } }],
+      }),
+    );
+    this._sphere.setPhysicalBody((mesh) =>
+      this._physicsWorld!.addBody(mesh, {
+        type: "dynamic",
+        colliders: [{ shape: { type: "autoSphere" }, restitution: 0.5 }],
+      }),
+    );
+
+    this._controls = new StudioControls(this.camera, this.domElement);
+  }
+
+  public update(delta: number): void {
+    this._physicsWorld?.step(delta);
+    this._controls?.update(delta);
+    if (this.isKeyPressed("Space")) this.loadScene("main", false);
+  }
+
+  public override delete(): void {
+    this._controls?.dispose();
+    if (this._sphere?.mesh) this.removeMesh(this._sphere.mesh);
+    this._sphere?.dispose(true);
+    if (this._ground?.mesh) this.removeMesh(this._ground.mesh);
+    this._ground?.dispose(true);
+    this._physicsWorld?.dispose();
     }
 }
 
 const canvas = document.querySelector<HTMLCanvasElement>("#app-canvas")!;
 const world = new ThreeWorld(canvas, window.innerWidth, window.innerHeight);
-const handleResize = () => {
-  world.resize(window.innerWidth, window.innerHeight);
-};
+const handleResize = () => world.resize(window.innerWidth, window.innerHeight);
 window.addEventListener("resize", handleResize);
 
-world.addScene("sample", new SampleScene());
-await world.start("sample");
+world.addScene("main", new MainScene());
+world.addScene("physics", new PhysicsScene());
+await world.start("main");
 
 // On teardown:
 window.removeEventListener("resize", handleResize);
-// world.delete();
+world.delete();
 ```
 
 ## Camera Controls (`StudioControls`)

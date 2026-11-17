@@ -109,9 +109,11 @@ export default class ThreeWorld {
 
         this._currentScene.start();
 
+        let delta = 0.0;
         const _animate = () => {
             if (this._disposed) return;
             this._timer.update();
+            delta = Math.min(this._timer.getDelta(), 0.1);
 
             if (this._switchSceneInfo.switchScene) {
                 if (this._currentScene) {
@@ -130,7 +132,7 @@ export default class ThreeWorld {
             }
 
             if (this._currentScene) {
-                this._currentScene.update(this._timer.getDelta());
+                this._currentScene.update(delta);
                 this._renderer.render(this._currentScene.scene, this._camera);
             }
         };
