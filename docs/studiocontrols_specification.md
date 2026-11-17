@@ -102,7 +102,7 @@ Calls `removeEventListener` for the registered pointer, context-menu, keyboard, 
 ```typescript
 import { SceneController } from "./SceneController";
 import StudioControls from "./StudioControls";
-import ThreeSpace from "./ThreeSpace";
+import ThreeWorld from "./ThreeWorld";
 
 class ControlledScene extends SceneController {
   private controls: StudioControls | null = null;
@@ -124,14 +124,15 @@ class ControlledScene extends SceneController {
 }
 
 const canvas = document.querySelector<HTMLCanvasElement>("#app-canvas")!;
-const space = new ThreeSpace(canvas, window.innerWidth, window.innerHeight);
+const world = new ThreeWorld(canvas, window.innerWidth, window.innerHeight);
 
 window.addEventListener("resize", () => {
-  space.resize(window.innerWidth, window.innerHeight);
+  world.resize(window.innerWidth, window.innerHeight);
 });
 
-await space.start(new ControlledScene());
+world.addScene("controlled", new ControlledScene());
+await world.start("controlled");
 
 // On teardown:
-// space.delete();
+// world.delete();
 ```

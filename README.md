@@ -4,38 +4,42 @@ Utilities for building Three.js scenes with a WebGPU renderer and DCC-style view
 
 ## Features
 
-- **`ThreeSpace`**:
+- **`ThreeWorld`**:
   - Manages a perspective camera, WebGPU renderer, frame timer, and scene-controller lifecycle.
-  - Provides viewport resizing, keyboard-state queries, and scene switching.
+  - Provides viewport resizing, keyboard-state queries, and keyed scene switching.
 - **`StudioControls`**:
   - Wraps `OrbitControls` with middle-button panning and fly-through controls.
   - Supports right-button look, left-Alt activation, WASDQE movement, and arrow-key rotation.
 - **`SceneController`**:
   - Abstract base class for a scene's startup, per-frame update, and cleanup logic.
   - Provides protected helpers for adding/removing meshes, checking pressed keys, and requesting scene switches.
+- **`PhysicsWorld`**:
+  - Wraps Rapier physics with Three.js object bindings, rigid bodies, colliders, sensors, and collision events.
+  - Steps the simulation and synchronizes dynamic body transforms back to their Three.js objects.
 
 ## Requirements
 
 - Three.js `>=0.160.0` with `three/webgpu` and `OrbitControls` support.
+- `@dimforge/rapier3d-compat` `>=0.21.0` to use `PhysicsWorld`.
 - A browser with WebGPU support.
 
 ## Installation
 
-The repository is currently marked private and does not define a built package entry point. To use the library, install Three.js and include this repository's `src/s-three-extensions` source in your project or workspace:
+The repository is currently marked private and does not define a built package entry point. To use the library, install Three.js and Rapier, then include this repository's `src/s-three-extensions` source in your project or workspace:
 
 ```bash
 npm install  https://github.com/suna66/s-three-extensions.git
 ```
 
-The source barrel at `src/s-three-extensions/index.ts` exports `ThreeSpace`, `StudioControls`, and `SceneController`.
+The source barrel at `src/s-three-extensions/index.ts` exports `ThreeWorld`, `StudioControls`, `SceneController`, `PhysicsWorld`, and related helpers and types.
 
 ## Quick Start
 
-Create a `SceneController` subclass and pass it to `ThreeSpace.start()`. `StudioControls` should be created after the controller is initialized, because it needs the controller's camera and canvas.
+Create a `SceneController` subclass, register it with `ThreeWorld.addScene()`, then start the world with that scene's key. `StudioControls` should be created after the controller has been initialized, because it needs the controller's camera and canvas.
 
 ```typescript
 import * as THREE from "three/webgpu";
-import { SceneController, StudioControls, ThreeSpace } from "./src/s-three-extensions";
+import { SceneController, StudioControls, ThreeWorld } from "./src/s-three-extensions";
 
 class SampleScene extends SceneController {
     private controls: StudioControls | null = null;
@@ -67,17 +71,18 @@ class SampleScene extends SceneController {
 }
 
 const canvas = document.querySelector<HTMLCanvasElement>("#app-canvas")!;
-const space = new ThreeSpace(canvas, window.innerWidth, window.innerHeight);
+const world = new ThreeWorld(canvas, window.innerWidth, window.innerHeight);
 const handleResize = () => {
-    space.resize(window.innerWidth, window.innerHeight);
+  world.resize(window.innerWidth, window.innerHeight);
 };
 window.addEventListener("resize", handleResize);
 
-await space.start(new SampleScene());
+world.addScene("sample", new SampleScene());
+await world.start("sample");
 
 // On teardown:
 window.removeEventListener("resize", handleResize);
-// space.delete();
+// world.delete();
 ```
 
 ## Camera Controls (`StudioControls`)
@@ -97,9 +102,10 @@ StudioControls keyboard input is ignored when focus is in an `INPUT` or `TEXTARE
 
 See the detailed interface specifications:
 
-- [ThreeSpace](./docs/threespace_specification.md)
-- [SceneController](./docs/scenecontroller_specification.md)
-- [StudioControls](./docs/studiocontrols_specification.md)
+- [ThreeWorld](./docs/threeworld_specification.md) | [日本語](./docs/ja/threeworld_specification.md)
+- [SceneController](./docs/scenecontroller_specification.md) | [日本語](./docs/ja/scenecontroller_specification.md)
+- [StudioControls](./docs/studiocontrols_specification.md) | [日本語](./docs/ja/studiocontrols_specification.md)
+- [PhysicsWorld](./docs/physicsworld_specification.md) | [日本語](./docs/ja/physicsworld_specification.md)
 
 ## License
 

@@ -13,7 +13,7 @@ interface SwitchSceneInfo {
     switchScene: boolean;
 }
 
-export default class ThreeSpace {
+export default class ThreeWorld {
     private _camera: THREE.PerspectiveCamera;
     private _renderer: THREE.WebGPURenderer;
     private _timer: THREE.Timer;
@@ -82,7 +82,7 @@ export default class ThreeSpace {
         const nextScene = this._sceneStack.get(key);
         if (!nextScene) return false;
         this._nextScene = nextScene;
-        this._nextScene.start();
+        this._nextScene.resume();
         this._switchSceneInfo.switchScene = true;
         this._switchSceneInfo.deleteFlag = isDelete;
         this._switchSceneInfo.key = key;
@@ -119,7 +119,7 @@ export default class ThreeSpace {
                         this._currentScene.delete();
                         this._sceneStack.delete(this._currentSceneKey);
                     } else {
-                        this._currentScene.stop();
+                        this._currentScene.suspend();
                     }
                 }
                 this._currentScene = this._nextScene;

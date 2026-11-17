@@ -1,16 +1,18 @@
 import * as THREE from "three/webgpu";
-import ThreeSpace from "./ThreeSpace";
+import ThreeWorld from "./ThreeWorld";
 
 export abstract class SceneController {
     protected _scene: THREE.Scene;
-    protected _space: ThreeSpace | null = null;
+    protected _space: ThreeWorld | null = null;
+    private _suspended: boolean = false;
 
     constructor() {
         this._scene = new THREE.Scene();
     }
 
-    public init(space: ThreeSpace) {
+    public init(space: ThreeWorld) {
         this._space = space;
+        this._suspended = false;
     }
 
     public get scene(): THREE.Scene {
@@ -25,10 +27,32 @@ export abstract class SceneController {
         return this._space!.domElement;
     }
 
+    /** @internal */
+    public get suspended(): boolean {
+        return this._suspended;
+    }
+
     public abstract start(): void;
     public abstract update(delta: number): void;
     public stop() {}
+    public restart() {}
     public delete() {}
+
+    /** @internal */
+    public suspend() {
+        this.stop();
+        this._suspended = true;
+    }
+
+    /** @internal */
+    public resume() {
+        if (this._suspended) {
+            this.restart();
+        } else {
+            this.start();
+        }
+        this._suspended = false;
+    }
 
     protected loadScene(key: string, isDelete: boolean = true) {
         if (this._space) {
