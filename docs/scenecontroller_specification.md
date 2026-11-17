@@ -95,12 +95,11 @@ Adds the mesh directly to the controller's scene.
 
 ---
 
-### `protected removeMesh(mesh: THREE.Mesh, disposed: boolean = false): void`
-Removes the mesh directly from the controller's scene. When `disposed` is `true`, disposes of the mesh geometry and its material (or each material when the material is an array). It does not dispose textures or recursively dispose child objects.
+### `protected removeMesh(mesh: THREE.Mesh): void`
+Removes the mesh directly from the controller's scene. It does not dispose the mesh geometry, material, textures, or child objects. Dispose owned resources separately, or use `IntegrateObject` to manage a mesh and optional physics body together.
 
 * **Parameters:**
   * `mesh`: The mesh to remove.
-  * `disposed`: Whether to dispose the mesh geometry and material; defaults to `false`.
 * **Returns:** `void`
 
 ---
@@ -128,7 +127,14 @@ export class SampleScene extends SceneController {
     }
 
     public override delete(): void {
-        if (this.cube) this.removeMesh(this.cube, true);
+        if (this.cube) {
+            this.removeMesh(this.cube);
+            this.cube.geometry.dispose();
+            const materials = Array.isArray(this.cube.material)
+                ? this.cube.material
+                : [this.cube.material];
+            materials.forEach((material) => material.dispose());
+        }
     }
 }
 ```

@@ -93,7 +93,14 @@ class SampleScene extends SceneController {
     }
 
     public override delete(): void {
-        if (this.cube) this.removeMesh(this.cube, true);
+        if (this.cube) {
+            this.removeMesh(this.cube);
+            this.cube.geometry.dispose();
+            const materials = Array.isArray(this.cube.material)
+                ? this.cube.material
+                : [this.cube.material];
+            materials.forEach((material) => material.dispose());
+        }
     }
 }
 

@@ -68,16 +68,7 @@ export abstract class SceneController {
         this._scene.add(mesh);
     }
 
-    protected removeMesh(mesh: THREE.Mesh, disposed: boolean = false) {
+    protected removeMesh(mesh: THREE.Mesh) {
         this._scene.remove(mesh);
-
-        if (disposed) {
-            mesh.geometry.dispose();
-            if (Array.isArray(mesh.material)) {
-                mesh.material.forEach((material) => material.dispose());
-            } else {
-                mesh.material.dispose();
-            }
-        }
     }
 }

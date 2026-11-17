@@ -1,18 +1,20 @@
 import { useEffect } from "react";
-import { ThreeWorld, SceneController, StudioControls, PhysicsWorld } from "../../src/s-three-extensions";
+import { ThreeWorld, SceneController, StudioControls, PhysicsWorld, IntegrateObject } from "../../src/s-three-extensions";
 import * as THREE from "three";
 
 
 class MainScene extends SceneController {
     private _controls: StudioControls | null = null;
-    private _cube: THREE.Mesh | null = null;
+    private _cube: IntegrateObject | null = null;
     
     public start() {
-        const geometry = new THREE.BoxGeometry();
-        const material = new THREE.MeshNormalMaterial();
-        const cube = new THREE.Mesh(geometry, material);
-        this.addMesh(cube);
-        this._cube = cube;
+        this._cube = new IntegrateObject(() => {
+            const geometry = new THREE.BoxGeometry();
+            const material = new THREE.MeshNormalMaterial();
+            const mesh = new THREE.Mesh(geometry, material);
+            this.addMesh(mesh);
+            return mesh;
+        });
 
         this._controls = new StudioControls(
             this.camera,
@@ -35,7 +37,8 @@ class MainScene extends SceneController {
             this._controls.dispose();
         }
         if (this._cube) {
-            this.removeMesh(this._cube, true);
+            this.removeMesh(this._cube.mesh!);
+            this._cube.dispose(true);
         }
     }
 }
@@ -43,34 +46,40 @@ class MainScene extends SceneController {
 class SubScene extends SceneController {
     private _physicsWorld: PhysicsWorld | null = null;
     private _controls: StudioControls | null = null;
-    private _sphere: THREE.Mesh | null = null;
-    private _ground: THREE.Mesh | null = null;
+
+    private _sphere: IntegrateObject | null = null;
+    private _ground: IntegrateObject | null = null;
     
     public async start() {
         this._physicsWorld = await PhysicsWorld.create();
 
-        const geometry = new THREE.SphereGeometry(1, 32, 32);
-        const material = new THREE.MeshNormalMaterial();
-        const cube = new THREE.Mesh(geometry, material);
-        this.addMesh(cube);
-        this._sphere = cube;
+        this._sphere = new IntegrateObject(() => {
+            const geometry = new THREE.SphereGeometry(1, 32, 32);
+            const material = new THREE.MeshNormalMaterial();
+            const cube = new THREE.Mesh(geometry, material);
+            this.addMesh(cube);
+            return cube;
+        });
 
-        const groundGeometry = new THREE.PlaneGeometry(10, 10);
-        const groundMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
-        const ground = new THREE.Mesh(groundGeometry, groundMaterial);
-        ground.rotation.x = -Math.PI / 2;
-        ground.position.y = -3;
-        this.addMesh(ground);
-        this._ground = ground;
+        this._ground = new IntegrateObject(() => {
+            const groundGeometry = new THREE.PlaneGeometry(10, 10);
+            const groundMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+            const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+            ground.rotation.x = -Math.PI / 2;
+            ground.position.y = -3;
+            this.addMesh(ground);
+            return ground;
+        });
 
-        const groundHandle = this._physicsWorld.addBody(this._ground, {
+        this._ground.setPhysicalBody((mesh) => this._physicsWorld!.addBody(mesh, {
             type: "fixed",
             colliders: [{shape: {type: "box", halfExtents:[10, 10, 0.1]}, offset: [0, 0, -0.1], restitution: 0.5}]
-        });
-        const sphereHandle = this._physicsWorld.addBody(this._sphere, {
+        }));
+
+        this._sphere.setPhysicalBody((mesh) => this._physicsWorld!.addBody(mesh, {
             type: "dynamic",
             colliders: [{shape: {type: "autoSphere"}, restitution: 0.5}]
-        });
+        }));
 
         this._controls = new StudioControls(
             this.camera,
@@ -96,7 +105,12 @@ class SubScene extends SceneController {
             this._controls.dispose();
         }
         if (this._sphere) {
-            this.removeMesh(this._sphere, true);
+            this.removeMesh(this._sphere.mesh!);
+            this._sphere.dispose(true);
+        }
+        if (this._ground) {
+            this.removeMesh(this._ground.mesh!);
+            this._ground.dispose(true);
         }
     }
 }

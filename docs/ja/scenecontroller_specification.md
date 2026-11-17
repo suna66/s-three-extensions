@@ -95,12 +95,11 @@
 
 ---
 
-### `protected removeMesh(mesh: THREE.Mesh, disposed: boolean = false): void`
-メッシュをこのコントローラーのシーンから直接削除します。`disposed` が `true` の場合は、メッシュのジオメトリとマテリアル（配列の場合は各マテリアル）を破棄します。テクスチャの破棄や子オブジェクトの再帰的な破棄は行いません。
+### `protected removeMesh(mesh: THREE.Mesh): void`
+メッシュをこのコントローラーのシーンから直接削除します。メッシュのジオメトリ、マテリアル、テクスチャ、子オブジェクトは破棄しません。所有するリソースは別途破棄してください。メッシュと任意の物理ボディをまとめて管理するには `IntegrateObject` を使用できます。
 
 * **パラメーター:**
   * `mesh`: 削除するメッシュです。
-  * `disposed`: メッシュのジオメトリとマテリアルを破棄するかどうかです。既定値は `false` です。
 * **戻り値:** `void`
 
 ---
@@ -128,7 +127,14 @@ export class SampleScene extends SceneController {
     }
 
     public override delete(): void {
-        if (this.cube) this.removeMesh(this.cube, true);
+        if (this.cube) {
+            this.removeMesh(this.cube);
+            this.cube.geometry.dispose();
+            const materials = Array.isArray(this.cube.material)
+                ? this.cube.material
+                : [this.cube.material];
+            materials.forEach((material) => material.dispose());
+        }
     }
 }
 ```

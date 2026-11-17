@@ -16,6 +16,9 @@ Utilities for building Three.js scenes with a WebGPU renderer and DCC-style view
 - **`PhysicsWorld`**:
   - Wraps Rapier physics with Three.js object bindings, rigid bodies, colliders, sensors, and collision events.
   - Steps the simulation and synchronizes dynamic body transforms back to their Three.js objects.
+- **`IntegrateObject`**:
+  - Groups a Three.js mesh with an optional `PhysicsBodyHandle`.
+  - Provides a single place to release the physics body and optionally dispose mesh geometry and materials.
 
 ## Requirements
 
@@ -31,7 +34,7 @@ The repository is currently marked private and does not define a built package e
 npm install  https://github.com/suna66/s-three-extensions.git
 ```
 
-The source barrel at `src/s-three-extensions/index.ts` exports `ThreeWorld`, `StudioControls`, `SceneController`, `PhysicsWorld`, and related helpers and types.
+The source barrel at `src/s-three-extensions/index.ts` exports `ThreeWorld`, `StudioControls`, `SceneController`, `PhysicsWorld`, `IntegrateObject`, and related helpers and types.
 
 ## Quick Start
 
@@ -66,7 +69,14 @@ class SampleScene extends SceneController {
 
     public override delete(): void {
         this.controls?.dispose();
-        if (this.cube) this.removeMesh(this.cube, true);
+      if (this.cube) {
+        this.removeMesh(this.cube);
+        this.cube.geometry.dispose();
+        const materials = Array.isArray(this.cube.material)
+          ? this.cube.material
+          : [this.cube.material];
+        materials.forEach((material) => material.dispose());
+      }
     }
 }
 
@@ -106,6 +116,7 @@ See the detailed interface specifications:
 - [SceneController](./docs/scenecontroller_specification.md) | [日本語](./docs/ja/scenecontroller_specification.md)
 - [StudioControls](./docs/studiocontrols_specification.md) | [日本語](./docs/ja/studiocontrols_specification.md)
 - [PhysicsWorld](./docs/physicsworld_specification.md) | [日本語](./docs/ja/physicsworld_specification.md)
+- [IntegrateObject](./docs/integrateobject_specification.md) | [日本語](./docs/ja/integrateobject_specification.md)
 
 ## License
 
