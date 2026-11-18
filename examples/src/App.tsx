@@ -4,7 +4,6 @@ import * as THREE from "three";
 
 
 class MainScene extends SceneController {
-    private _controls: StudioControls | null = null;
     private _cube: IntegrateObject | null = null;
     
     public start() {
@@ -12,30 +11,18 @@ class MainScene extends SceneController {
             const geometry = new THREE.BoxGeometry();
             const material = new THREE.MeshNormalMaterial();
             const mesh = new THREE.Mesh(geometry, material);
-            this.addMesh(mesh);
             return mesh;
         });
-
-        this._controls = new StudioControls(
-            this.camera,
-            this.domElement,
-        );
+        this.addMesh(this._cube);
     }
 
-    public update(delta: number) {
-        // Update scene objects here
-        if (this._controls) {
-            this._controls.update(delta);
-        }
+    public update(_delta: number) {
         if (this.isKeyPressed("Space")) {
             this.loadScene("sub", false);
         }
     }
 
     public delete() {
-        if (this._controls) {
-            this._controls.dispose();
-        }
         if (this._cube) {
             this.removeMesh(this._cube.mesh!);
             this._cube.dispose(true);
@@ -45,7 +32,6 @@ class MainScene extends SceneController {
 
 class SubScene extends SceneController {
     private _physicsWorld: PhysicsWorld | null = null;
-    private _controls: StudioControls | null = null;
 
     private _sphere: IntegrateObject | null = null;
     private _ground: IntegrateObject | null = null;
@@ -57,9 +43,9 @@ class SubScene extends SceneController {
             const geometry = new THREE.SphereGeometry(1, 32, 32);
             const material = new THREE.MeshNormalMaterial();
             const cube = new THREE.Mesh(geometry, material);
-            this.addMesh(cube);
             return cube;
         });
+        this.addMesh(this._sphere);
 
         this._ground = new IntegrateObject(() => {
             const groundGeometry = new THREE.PlaneGeometry(10, 10);
@@ -67,9 +53,9 @@ class SubScene extends SceneController {
             const ground = new THREE.Mesh(groundGeometry, groundMaterial);
             ground.rotation.x = -Math.PI / 2;
             ground.position.y = -3;
-            this.addMesh(ground);
             return ground;
         });
+        this.addMesh(this._ground);
 
         this._ground.setPhysicalBody((mesh) => this._physicsWorld!.addBody(mesh, {
             type: "fixed",
@@ -81,19 +67,11 @@ class SubScene extends SceneController {
             colliders: [{shape: {type: "autoSphere"}, restitution: 0.5}]
         }));
 
-        this._controls = new StudioControls(
-            this.camera,
-            this.domElement,
-        );
-
     }
 
     public update(delta: number) {
         this._physicsWorld?.step(delta);
         // Update scene objects here
-        if (this._controls) {
-            this._controls.update(delta);
-        }
         if (this.isKeyPressed("Space")) {
             this.loadScene("main", false);
         }
@@ -101,15 +79,12 @@ class SubScene extends SceneController {
 
     public delete() {
         this._physicsWorld?.dispose();
-        if (this._controls) {
-            this._controls.dispose();
-        }
         if (this._sphere) {
-            this.removeMesh(this._sphere.mesh!);
+            this.removeMesh(this._sphere);
             this._sphere.dispose(true);
         }
         if (this._ground) {
-            this.removeMesh(this._ground.mesh!);
+            this.removeMesh(this._ground);
             this._ground.dispose(true);
         }
     }
@@ -131,6 +106,9 @@ function App() {
         threeWorld.addScene("sub", subScene);
         threeWorld.addScene("main", mainScene); 
         threeWorld.start("main");
+        threeWorld.setControls(
+            (camera, domElement) => new StudioControls(camera, domElement)
+        );
 
         return () => {
             threeWorld.delete();

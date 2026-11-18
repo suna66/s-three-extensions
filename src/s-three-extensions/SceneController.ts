@@ -1,9 +1,10 @@
 import * as THREE from "three/webgpu";
 import ThreeWorld from "./ThreeWorld";
+import IntegrateObject from "./IntegrateObject";
 
 export abstract class SceneController {
     protected _scene: THREE.Scene;
-    protected _space: ThreeWorld | null = null;
+    protected _world: ThreeWorld | null = null;
     private _suspended: boolean = false;
 
     constructor() {
@@ -11,7 +12,7 @@ export abstract class SceneController {
     }
 
     public init(space: ThreeWorld) {
-        this._space = space;
+        this._world = space;
         this._suspended = false;
     }
 
@@ -20,11 +21,11 @@ export abstract class SceneController {
     }
 
     public get camera(): THREE.Camera {
-        return this._space!.camera;
+        return this._world!.camera;
     }
 
     public get domElement(): HTMLCanvasElement {
-        return this._space!.domElement;
+        return this._world!.domElement;
     }
 
     /** @internal */
@@ -55,20 +56,32 @@ export abstract class SceneController {
     }
 
     protected loadScene(key: string, isDelete: boolean = true) {
-        if (this._space) {
-            this._space.loadScene(key, isDelete);
+        if (this._world) {
+            this._world.loadScene(key, isDelete);
         }
     }
 
     protected isKeyPressed(key: string): boolean {
-        return this._space?.isKeyPressed(key) ?? false;
+        return this._world?.controls?.getKeyState(key) ?? false;
     }
 
-    protected addMesh(mesh: THREE.Mesh) {
-        this._scene.add(mesh);
+    protected addMesh(mesh: THREE.Mesh | IntegrateObject) {
+        if (mesh instanceof IntegrateObject) {
+            if (mesh.mesh) {
+                this._scene.add(mesh.mesh);
+            }
+        } else {
+            this._scene.add(mesh);
+        }
     }
 
-    protected removeMesh(mesh: THREE.Mesh) {
-        this._scene.remove(mesh);
+    protected removeMesh(mesh: THREE.Mesh | IntegrateObject) {
+        if (mesh instanceof IntegrateObject) {
+            if (mesh.mesh) {
+                this._scene.remove(mesh.mesh);
+            }
+        } else {
+            this._scene.remove(mesh);
+        }
     }
 }

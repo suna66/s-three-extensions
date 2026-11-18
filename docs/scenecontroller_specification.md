@@ -80,9 +80,9 @@ Requests a transition to a controller registered under `key` through the associa
 ---
 
 ### `protected isKeyPressed(key: string): boolean`
-Checks whether the given `KeyboardEvent.code` is currently pressed in the associated `ThreeWorld` (for example, `"KeyW"`). Returns `false` if the controller has not been initialized with a world.
+Checks whether the given `KeyboardEvent.code` is currently pressed in the controls configured on the associated `ThreeWorld` (for example, `"KeyW"`). Returns `false` if the controller has not been initialized with a world or no controls are configured.
 
-* **Parameters:** `key` is a keyboard code, not a character value.
+* **Parameters:** `key` is a keyboard code, not a character value. The configured controls must track that code for it to be reported.
 * **Returns:** `boolean`
 
 ---

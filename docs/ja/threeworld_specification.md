@@ -1,7 +1,7 @@
 # `ThreeWorld` クラス インターフェース仕様
 
 ## 1. 概要
-`ThreeWorld` は透視カメラ、WebGPUレンダラー、フレームタイマー、キーボード状態、およびキーで管理される `SceneController` インスタンスのライフサイクルを管理します。各コントローラーは個別の `THREE.Scene` を所有します。
+`ThreeWorld` は透視カメラ、WebGPUレンダラー、フレームタイマー、任意のカメラコントロール、およびキーで管理される `SceneController` インスタンスのライフサイクルを管理します。各コントローラーは個別の `THREE.Scene` を所有し、キーボード状態は設定されたコントロールから提供されます。
 
 * **依存関係:** `three/webgpu`、`SceneController`
 * **エクスポート形式:** `export default class ThreeWorld`。`src/s-three-extensions/index.ts` から `ThreeWorld` として再エクスポートされます。
@@ -25,7 +25,7 @@
 `PerspectiveCamera`、`WebGPURenderer`、`THREE.Timer` を作成します。
 
 * **パラメーター:** `canvas` はレンダラーに渡すキャンバスです。`width` と `height` は初期レンダラーサイズとカメラのアスペクト比に使われます。
-* **初期動作:** 上記の既定値でカメラを設定し、アンチエイリアスを有効にしてレンダラーを作成します。タイマーを `document` に接続し、押下中の `KeyboardEvent.code` を追跡する `keydown` / `keyup` リスナーを `window` に登録します。
+* **初期動作:** 上記の既定値でカメラを設定し、アンチエイリアスを有効にしてレンダラーを作成します。タイマーを `document` に接続します。
 
 ---
 
@@ -36,13 +36,11 @@
 | `camera` | `THREE.PerspectiveCamera` | 読み取り専用 | 内部の透視カメラです。 |
 | `renderer` | `THREE.WebGPURenderer` | 読み取り専用 | 内部のWebGPUレンダラーです。 |
 | `domElement` | `HTMLCanvasElement` | 読み取り専用 | レンダラーのキャンバス（`renderer.domElement`）です。 |
+| `controls` | `AbstractControls \| null` | 読み取り専用 | 設定されたカメラコントロールです。未設定の場合は `null` です。 |
 
 ---
 
 ## 5. メソッド
-
-### `isKeyPressed(key: string): boolean`
-指定したキーボードコードが現在押されているかを返します。`"KeyW"` や `"ArrowUp"` のような `KeyboardEvent.code` の値を渡してください。
 
 ### `addScene(key: string, scene: SceneController): void`
 コントローラーをこのワールドで初期化し、`key` に登録します。
@@ -53,19 +51,22 @@
 ### `setCameraPosition(x: number, y: number, z: number): void`
 カメラのワールド座標上の位置を設定します。
 
+### `setControls(func: (camera: THREE.Camera, domElement: HTMLCanvasElement) => AbstractControls): void`
+指定したファクトリー関数でカメラコントロールを作成して保存します。コントロールは各フレームで、アクティブなシーンの `update()` より前に更新されます。シーンから入力状態を利用する場合は、ワールドの開始前に設定してください。既存のコントロールを置き換えても、以前のインスタンスは自動的に破棄されません。
+
 ### `resize(width: number, height: number): void`
 カメラのアスペクト比と投影行列を更新し、レンダラーのサイズも更新します。
 
 ### `async start(startScene: string): Promise<void>`
-レンダラーを初期化し、`startScene` に登録されたコントローラーを選択して、その `start()` を呼び出し、描画ループを設定します。指定キーにコントローラーが登録されていない場合、描画ループを開始せずに戻ります。各フレームではタイマーを更新し、保留中のシーン遷移を適用した後、アクティブなコントローラーの `update(delta)` を呼び出します。`delta` は前回フレームからの経過秒数です。その後、内部カメラでコントローラーの `scene` を描画します。
+レンダラーを初期化し、`startScene` に登録されたコントローラーを選択して、その `start()` を呼び出し、描画ループを設定します。指定キーにコントローラーが登録されていない場合、描画ループを開始せずに戻ります。各フレームではタイマーを更新し、前回フレームからの経過秒数 `delta` を最大 `0.1` 秒に制限して、保留中のシーン遷移を適用します。設定済みのコントロールを更新してから、アクティブなコントローラーの `update(delta)` を呼び出し、内部カメラでコントローラーの `scene` を描画します。
 
 ### `delete(): void`
-インスタンスを破棄済みにし、アクティブなコントローラーがあればその `delete()` を呼び出します。また、`window` のキーボードリスナーを削除し、タイマーを切断・破棄します。このメソッドはレンダラーを明示的には破棄しません。
+インスタンスを破棄済みにし、アクティブなコントローラーがあればその `delete()` を呼び出し、タイマーを切断・破棄します。設定済みのコントロールとレンダラーはこのメソッドでは明示的に破棄されないため、必要に応じてコントロールを別途破棄してください。
 
 ---
 
 ## 6. `SceneController` との関係
-`SceneController` は `THREE.Scene` を所有し、通常は `addScene()` によって呼び出される `init(world)` を通じて `ThreeWorld` インスタンスを受け取ります。シーン、カメラ、キャンバスを公開し、`start(): void` と `update(delta: number): void` の実装を要求します。コントローラーは保護メソッド `loadScene()` でキーを指定した遷移を要求できます。`addMesh()` や `removeMesh()` などのメッシュ補助メソッドはコントローラーに属します。
+`SceneController` は `THREE.Scene` を所有し、通常は `addScene()` によって呼び出される `init(world)` を通じて `ThreeWorld` インスタンスを受け取ります。シーン、カメラ、キャンバスを公開し、`start(): void` と `update(delta: number): void` の実装を要求します。コントローラーは保護メソッド `loadScene()` でキーを指定した遷移を要求し、`isKeyPressed()` で設定済みコントロールのキー状態を確認できます。`addMesh()` や `removeMesh()` などのメッシュ補助メソッドはコントローラーに属します。
 
 ---
 
@@ -75,6 +76,7 @@
 import * as THREE from "three/webgpu";
 import ThreeWorld from "./ThreeWorld";
 import { SceneController } from "./SceneController";
+import StudioControls from "./controls/StudioControls";
 
 class SampleScene extends SceneController {
     private cube: THREE.Mesh | null = null;
@@ -106,6 +108,7 @@ class SampleScene extends SceneController {
 
 const canvas = document.querySelector<HTMLCanvasElement>("#app-canvas")!;
 const world = new ThreeWorld(canvas, window.innerWidth, window.innerHeight);
+world.setControls((camera, domElement) => new StudioControls(camera, domElement));
 world.addScene("sample", new SampleScene());
 
 window.addEventListener("resize", () => {
@@ -115,5 +118,6 @@ window.addEventListener("resize", () => {
 await world.start("sample");
 
 // 終了時:
-// world.delete();
+world.controls?.dispose();
+world.delete();
 ```

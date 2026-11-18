@@ -1,61 +1,33 @@
+import AbstractControls, { type MouseButtons } from "./AbstractControls";
 import * as THREE from "three";
-import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
-export type MouseButtons = {
-    LEFT: THREE.MOUSE | null;
-    MIDDLE: THREE.MOUSE | null;
-    RIGHT: THREE.MOUSE | null;
-};
-
-const DEFAULT_MOUSE = {
-    LEFT: THREE.MOUSE.ROTATE,
-    MIDDLE: THREE.MOUSE.PAN,
-    RIGHT: null,
-};
-
-export default class CustomControls {
-    protected readonly _camera: THREE.Camera;
-    protected readonly _dom: HTMLElement;
-    protected _controls: OrbitControls;
-    protected _isFlayThroughMode: boolean = false;
-    protected _isRightDragging: boolean = false;
-    protected _pressKeys: Set<string>;
+export default class StudioControls extends AbstractControls {
     protected _cameraSpeed: number = 5;
     protected _rotateSpeed: number = 1.5;
     protected _mouseSensitivity: number = 0.003;
+    protected _isFlayThroughMode: boolean = false;
+    protected _isRightDragging: boolean = false;
 
-    protected _direction = new THREE.Vector3();
-    protected _forward = new THREE.Vector3();
-    protected _right = new THREE.Vector3();
-    protected _euler = new THREE.Euler(0, 0, 0, "YXZ");
-
-    constructor(camera: THREE.Camera, dom: HTMLElement) {
-        this._camera = camera;
-        this._dom = dom;
-        this._isFlayThroughMode = false;
-        this._pressKeys = new Set<string>();
-
-        this._controls = new OrbitControls(camera, dom);
-        this.setupControlOptions();
+    constructor(camera: THREE.Camera, dom: HTMLCanvasElement) {
+        super(camera, dom);
 
         this.setupEvents();
-
-        this._controls.update();
     }
 
     protected defaultMode(): MouseButtons {
-        return DEFAULT_MOUSE;
+        return {
+            LEFT: null,
+            MIDDLE: THREE.MOUSE.PAN,
+            RIGHT: null,
+        };
     }
 
-    protected alternativeMode() {
-        return DEFAULT_MOUSE;
-    }
-
-    protected setupControlOptions() {
-        this._controls.mouseButtons = this.defaultMode();
-        this._camera.getWorldDirection(this._direction);
-
-        this._controls.target.copy(this._camera.position).add(this._direction);
+    protected alternativeMode(): MouseButtons {
+        return {
+            LEFT: THREE.MOUSE.ROTATE,
+            MIDDLE: THREE.MOUSE.PAN,
+            RIGHT: null,
+        };
     }
 
     protected handleMouseDown = (e: PointerEvent) => {
@@ -84,47 +56,6 @@ export default class CustomControls {
             }
         }
     };
-
-    protected handleKeyDown = (e: KeyboardEvent) => {
-        if (e.target instanceof HTMLElement) {
-            if (e.target.tagName == "INPUT" || e.target.tagName == "TEXTAREA")
-                return;
-        }
-        if (e.key === "Alt") {
-            e.preventDefault();
-        }
-        this._pressKeys.add(e.code);
-    };
-
-    protected handleKeyUp = (e: KeyboardEvent) => {
-        if (e.key === "Alt") {
-            e.preventDefault();
-        }
-        if (this._pressKeys.has(e.code)) this._pressKeys.delete(e.code);
-    };
-
-    protected handleBlur = () => {
-        this._pressKeys.clear();
-        this._isFlayThroughMode = false;
-        this._controls.mouseButtons = this.defaultMode();
-    };
-
-    protected handleContextMenu = (e: MouseEvent) => {
-        e.preventDefault();
-    };
-
-    protected setupEvents() {
-        this._dom.addEventListener("pointerdown", this.handleMouseDown, {
-            capture: true,
-        });
-        this._dom.addEventListener("pointermove", this.handleMouseMove);
-        this._dom.addEventListener("contextmenu", this.handleContextMenu);
-
-        addEventListener("pointerup", this.handleMouseUp);
-        addEventListener("keydown", this.handleKeyDown);
-        addEventListener("keyup", this.handleKeyUp);
-        addEventListener("blur", this.handleBlur);
-    }
 
     protected cameraMove(
         direction: "UP" | "RIGHT" | "FORWARD",
@@ -238,20 +169,5 @@ export default class CustomControls {
 
     public disableDamping() {
         this._controls.enableDamping = false;
-    }
-
-    public dispose() {
-        this._dom.removeEventListener("pointerdown", this.handleMouseDown);
-        this._dom.removeEventListener("pointermove", this.handleMouseMove);
-        this._dom.removeEventListener("contextmenu", this.handleContextMenu);
-        removeEventListener("pointerup", this.handleMouseUp);
-        removeEventListener("keydown", this.handleKeyDown);
-        removeEventListener("keyup", this.handleKeyUp);
-        removeEventListener("blur", this.handleBlur);
-    }
-
-    public update(delta: number) {
-        this.keyEvent(delta);
-        this._controls.update();
     }
 }

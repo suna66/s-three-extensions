@@ -1,4 +1,5 @@
-import StudioControls from "./StudioControls";
+import AbstractControls from "./controls/AbstractControls";
+import StudioControls from "./controls/StudioControls";
 import ThreeWorld from "./ThreeWorld";
 import { SceneController } from "./SceneController";
 import {
@@ -17,6 +18,7 @@ import type {
 } from "./types/PhysicsTypes";
 
 export {
+    AbstractControls,
     StudioControls,
     ThreeWorld,
     SceneController,

@@ -6,13 +6,15 @@ Utilities for building Three.js scenes with a WebGPU renderer and DCC-style view
 
 - **`ThreeWorld`**:
   - Manages a perspective camera, WebGPU renderer, frame timer, and scene-controller lifecycle.
-  - Provides viewport resizing, keyboard-state queries, and keyed scene switching.
+  - Provides viewport resizing, configurable camera controls, and keyed scene switching.
 - **`StudioControls`**:
   - Wraps `OrbitControls` with middle-button panning and fly-through controls.
   - Supports right-button look, left-Alt activation, WASDQE movement, and arrow-key rotation.
+- **`AbstractControls`**:
+  - Base class for camera controls; owns keyboard state and the `OrbitControls` lifecycle.
 - **`SceneController`**:
   - Abstract base class for a scene's startup, per-frame update, and cleanup logic.
-  - Provides protected helpers for adding/removing meshes, checking pressed keys, and requesting scene switches.
+  - Provides protected helpers for adding/removing meshes, checking control key state, and requesting scene switches.
 - **`PhysicsWorld`**:
   - Wraps Rapier physics with Three.js object bindings, rigid bodies, colliders, sensors, and collision events.
   - Steps the simulation and synchronizes dynamic body transforms back to their Three.js objects.
@@ -34,7 +36,7 @@ The repository is currently marked private and does not define a built package e
 npm install  https://github.com/suna66/s-three-extensions.git
 ```
 
-The source barrel at `src/s-three-extensions/index.ts` exports `ThreeWorld`, `StudioControls`, `SceneController`, `PhysicsWorld`, `IntegrateObject`, and related helpers and types.
+The source barrel at `src/s-three-extensions/index.ts` exports `ThreeWorld`, `AbstractControls`, `StudioControls`, `SceneController`, `PhysicsWorld`, `IntegrateObject`, and related helpers and types.
 
 ## Quick Start
 
@@ -51,10 +53,9 @@ import {
 } from "./src/s-three-extensions";
 
 class MainScene extends SceneController {
-  private _controls: StudioControls | null = null;
   private _cube: IntegrateObject | null = null;
 
-    public start(): void {
+  public start(): void {
     this._cube = new IntegrateObject(() => {
       const mesh = new THREE.Mesh(
         new THREE.BoxGeometry(),
@@ -63,16 +64,13 @@ class MainScene extends SceneController {
       this.addMesh(mesh);
       return mesh;
     });
-    this._controls = new StudioControls(this.camera, this.domElement);
-    }
+  }
 
-    public update(delta: number): void {
-    this._controls?.update(delta);
+  public update(_delta: number): void {
     if (this.isKeyPressed("Space")) this.loadScene("physics", false);
-    }
+  }
 
-    public override delete(): void {
-    this._controls?.dispose();
+  public override delete(): void {
     if (this._cube?.mesh) this.removeMesh(this._cube.mesh);
     this._cube?.dispose(true);
   }
@@ -80,7 +78,6 @@ class MainScene extends SceneController {
 
 class PhysicsScene extends SceneController {
   private _physicsWorld: PhysicsWorld | null = null;
-  private _controls: StudioControls | null = null;
   private _sphere: IntegrateObject | null = null;
   private _ground: IntegrateObject | null = null;
 
@@ -120,17 +117,14 @@ class PhysicsScene extends SceneController {
       }),
     );
 
-    this._controls = new StudioControls(this.camera, this.domElement);
   }
 
   public update(delta: number): void {
     this._physicsWorld?.step(delta);
-    this._controls?.update(delta);
     if (this.isKeyPressed("Space")) this.loadScene("main", false);
   }
 
   public override delete(): void {
-    this._controls?.dispose();
     if (this._sphere?.mesh) this.removeMesh(this._sphere.mesh);
     this._sphere?.dispose(true);
     if (this._ground?.mesh) this.removeMesh(this._ground.mesh);
@@ -141,6 +135,7 @@ class PhysicsScene extends SceneController {
 
 const canvas = document.querySelector<HTMLCanvasElement>("#app-canvas")!;
 const world = new ThreeWorld(canvas, window.innerWidth, window.innerHeight);
+world.setControls((camera, domElement) => new StudioControls(camera, domElement));
 const handleResize = () => world.resize(window.innerWidth, window.innerHeight);
 window.addEventListener("resize", handleResize);
 
@@ -150,6 +145,7 @@ await world.start("main");
 
 // On teardown:
 window.removeEventListener("resize", handleResize);
+world.controls?.dispose();
 world.delete();
 ```
 
@@ -165,11 +161,13 @@ world.delete();
 | **Move**                         | `W` / `A` / `S` / `D` / `Q` / `E`     | Moves relative to the camera while fly-through is active.          |
 
 StudioControls keyboard input is ignored when focus is in an `INPUT` or `TEXTAREA` element.
+Configure it with `ThreeWorld.setControls()` so the world updates it each frame and `SceneController.isKeyPressed()` reads its key state. Dispose the controls before deleting the world.
 
 ## Documentation
 
 See the detailed interface specifications:
 
+- [AbstractControls](./docs/abstractcontrols_specification.md) | [日本語](./docs/ja/abstractcontrols_specification.md)
 - [ThreeWorld](./docs/threeworld_specification.md) | [日本語](./docs/ja/threeworld_specification.md)
 - [SceneController](./docs/scenecontroller_specification.md) | [日本語](./docs/ja/scenecontroller_specification.md)
 - [StudioControls](./docs/studiocontrols_specification.md) | [日本語](./docs/ja/studiocontrols_specification.md)

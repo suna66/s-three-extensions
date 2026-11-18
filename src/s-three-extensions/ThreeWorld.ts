@@ -1,5 +1,6 @@
 import * as THREE from "three/webgpu";
 import { SceneController } from "./SceneController";
+import AbstractControls from "./controls/AbstractControls.js";
 
 const DEFAULT_FOV = 75;
 const DEFAULT_NEAR = 0.1;
@@ -23,10 +24,7 @@ export default class ThreeWorld {
     private _nextScene: SceneController | null = null;
     private _switchSceneInfo: SwitchSceneInfo;
     private _sceneStack: Map<string, SceneController>;
-
-    private _pressKeys: Set<string>;
-    private _handleKeyDown = (e: KeyboardEvent) => this._pressKeys.add(e.code);
-    private _handleKeyUp = (e: KeyboardEvent) => this._pressKeys.delete(e.code);
+    private _controls: AbstractControls | null = null;
 
     constructor(canvas: HTMLCanvasElement, width: number, height: number) {
         this._camera = new THREE.PerspectiveCamera(
@@ -45,7 +43,6 @@ export default class ThreeWorld {
         this._timer = new THREE.Timer();
         this._timer.connect(document);
 
-        this._pressKeys = new Set();
         this._sceneStack = new Map();
         this._switchSceneInfo = {
             key: "",
@@ -53,8 +50,10 @@ export default class ThreeWorld {
             deleteFlag: false,
             switchScene: false,
         };
-        window.addEventListener("keydown", this._handleKeyDown);
-        window.addEventListener("keyup", this._handleKeyUp);
+    }
+
+    public get controls() {
+        return this._controls;
     }
 
     public get camera() {
@@ -67,10 +66,6 @@ export default class ThreeWorld {
 
     public get domElement() {
         return this._renderer.domElement;
-    }
-
-    public isKeyPressed(key: string): boolean {
-        return this._pressKeys.has(key);
     }
 
     public addScene(key: string, scene: SceneController) {
@@ -91,6 +86,15 @@ export default class ThreeWorld {
 
     public setCameraPosition(x: number, y: number, z: number) {
         this._camera.position.set(x, y, z);
+    }
+
+    public setControls(
+        func: (
+            camera: THREE.Camera,
+            domElement: HTMLCanvasElement,
+        ) => AbstractControls,
+    ) {
+        this._controls = func(this.camera, this.domElement);
     }
 
     public resize(width: number, height: number) {
@@ -116,6 +120,9 @@ export default class ThreeWorld {
             delta = Math.min(this._timer.getDelta(), 0.1);
 
             if (this._switchSceneInfo.switchScene) {
+                if (this._controls) {
+                    this._controls.flash();
+                }
                 if (this._currentScene) {
                     if (this._switchSceneInfo.deleteFlag) {
                         this._currentScene.delete();
@@ -126,9 +133,12 @@ export default class ThreeWorld {
                 }
                 this._currentScene = this._nextScene;
                 this._currentSceneKey = this._switchSceneInfo.key;
-                this._pressKeys.clear();
                 this._switchSceneInfo.deleteFlag = false;
                 this._switchSceneInfo.switchScene = false;
+            }
+
+            if (this.controls) {
+                this.controls.update(delta);
             }
 
             if (this._currentScene) {
@@ -145,8 +155,6 @@ export default class ThreeWorld {
         if (this._currentScene) {
             this._currentScene.delete();
         }
-        window.removeEventListener("keydown", this._handleKeyDown);
-        window.removeEventListener("keyup", this._handleKeyUp);
         this._timer.disconnect();
         this._timer.dispose();
     }

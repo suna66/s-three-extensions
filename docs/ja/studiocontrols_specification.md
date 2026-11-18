@@ -1,9 +1,9 @@
 # `StudioControls` クラス インターフェース仕様
 
 ## 1. 概要
-`StudioControls` はThree.jsの `OrbitControls` を基にしたカメラコントローラーです。3D DCCツールやゲームエンジン（Unreal Engine、Unityなど）に似たビューポート操作を提供します。標準的なパン操作に加え、マウス右ボタンまたは左 `Alt` キーを押している間にフライスルー（ウォークスルー）操作を行えます。
+`StudioControls` は `AbstractControls` とThree.jsの `OrbitControls` を基にしたカメラコントローラーです。中ボタンでのパン、フライスルーモード中の左ボタンによるオービット回転、およびフライスルーモード中のカメラ視点操作と移動を提供します。
 
-* **依存関係:** `three`、`three/addons/controls/OrbitControls.js`
+* **依存関係:** `three`、`three/addons/controls/OrbitControls.js`、`AbstractControls`
 * **エクスポート形式:** `export default class StudioControls`
 
 ---
@@ -16,10 +16,10 @@
 | モード名 | 有効になる条件 | 左クリック（`LEFT`） | 中クリック（`MIDDLE`） | 右クリック（`RIGHT`） |
 | :--- | :--- | :--- | :--- | :--- |
 | `DefaultMode` | 初期状態 / アイドル | なし（`null`） | パン（`THREE.MOUSE.PAN`） | なし（`null`） |
-| `FlayThroughMode` | 左 `Alt` キー（`AltLeft`）を押している、または右ボタンをドラッグ中 | オービット回転（`THREE.MOUSE.ROTATE`） | パン（`THREE.MOUSE.PAN`） | なし（`null`） |
+| `FlyThroughMode` | 左 `Alt` キー（`AltLeft`）を押している、または右ボタンをドラッグ中 | オービット回転（`THREE.MOUSE.ROTATE`） | パン（`THREE.MOUSE.PAN`） | なし（`null`） |
 
 ### フライスルーモードの操作
-左 `Alt` キー（`AltLeft`）を押している間、またはマウス右ボタンをドラッグしている間にモードが有効になります。右ボタンのドラッグではポインターもキャプチャされ、カメラが直接回転します。左 `Alt` キーを押すと、左ボタンで `OrbitControls` の回転操作が行えます。
+左 `Alt` キー（`AltLeft`）を押している間、またはマウス右ボタンをドラッグしている間にモードが有効になります。右ボタンのドラッグではポインターもキャプチャされ、カメラが直接回転します。左 `Alt` キーを押すと、左ボタンで `OrbitControls` の回転操作が行えます。通常モードでは左・右クリックに `OrbitControls` の操作は割り当てられず、中ボタンでパンします。
 
 * **カメラの視点操作（回転）:**
   * **右ボタンのドラッグ:** ポインターの移動量に応じて、カメラのヨー（水平）とピッチ（垂直）を回転させます。マウス感度は `0.003` 固定です。ピッチは $\pm(\frac{\pi}{2} - 0.01)\text{ rad}$ の範囲に制限されます。
@@ -32,20 +32,22 @@
 
 イベント対象が `INPUT` または `TEXTAREA` 要素の場合、キーボード入力は無視されます。フライスルー移動と矢印キーによる回転は、フライスルーモード中のみ処理されます。ウィンドウがフォーカスを失うとモードは解除されます。
 
+`ThreeWorld.setControls()` で `StudioControls` を登録すると、ワールドが毎フレーム更新します。また、`SceneController.isKeyPressed()` が参照するキー状態も提供されます。`getKeyState()`、`flash()`、`dispose()`、`update()` は `AbstractControls` から継承します。
+
 ---
 
 ## 3. コンストラクター
 
-### `constructor(camera: THREE.Camera, dom: HTMLElement)`
+### `constructor(camera: THREE.Camera, dom: HTMLCanvasElement)`
 `OrbitControls` を初期化し、初期オービットターゲットを設定して、ポインター・キーボード・ウィンドウのイベントリスナーを登録します。
 
 * **パラメーター:**
   * `camera` (`THREE.Camera`): 操作対象のThree.jsカメラです。
-  * `dom` (`HTMLElement`): ポインターとコンテキストメニューのリスナーを取り付けるDOM要素です（通常は `renderer.domElement`）。
+  * `dom` (`HTMLCanvasElement`): ポインターとコンテキストメニューのリスナーを取り付けるキャンバスです（通常は `renderer.domElement`）。
 * **初期動作:**
   * マウスボタンの割り当てを `DefaultMode` に設定します。
   * `OrbitControls.target` を、カメラの現在のワールド方向（`getWorldDirection`）へ1単位進んだ位置に設定します。
-  * `dom` にポインターとコンテキストメニューのリスナーを、`window` にキーボード、ポインターアップ、フォーカス喪失のリスナーを登録します。
+  * `AbstractControls` を通じて `dom` にポインターとコンテキストメニューのリスナーを、`window` にキーボード、ポインターアップ、フォーカス喪失のリスナーを登録します。
   * 対象要素上でブラウザー標準のコンテキストメニューが表示されないようにします。
 
 ---
@@ -100,30 +102,34 @@
 
 ```typescript
 import { SceneController } from "./SceneController";
-import StudioControls from "./StudioControls";
+import StudioControls from "./controls/StudioControls";
 import ThreeWorld from "./ThreeWorld";
 
 class ControlledScene extends SceneController {
-  private controls: StudioControls | null = null;
-
   public start(): void {
-    this.controls = new StudioControls(this.camera, this.domElement);
-    this.controls.cameraSpeed = 8;
-    this.controls.rotateSpeed = 2.0;
-    this.controls.setDamping(0.1);
+    // シーンのオブジェクトをここで初期化します。
   }
 
-  public update(delta: number): void {
-    this.controls?.update(delta);
+  public update(_delta: number): void {
+    if (this.isKeyPressed("Space")) {
+      // 押されたキーを処理します。
+    }
   }
 
   public override delete(): void {
-    this.controls?.dispose();
+    // シーンが所有するリソースを解放します。
   }
 }
 
 const canvas = document.querySelector<HTMLCanvasElement>("#app-canvas")!;
 const world = new ThreeWorld(canvas, window.innerWidth, window.innerHeight);
+world.setControls((camera, domElement) => {
+  const controls = new StudioControls(camera, domElement);
+  controls.cameraSpeed = 8;
+  controls.rotateSpeed = 2.0;
+  controls.setDamping(0.1);
+  return controls;
+});
 
 window.addEventListener("resize", () => {
   world.resize(window.innerWidth, window.innerHeight);
@@ -133,5 +139,6 @@ world.addScene("controlled", new ControlledScene());
 await world.start("controlled");
 
 // 終了時:
-// world.delete();
+world.controls?.dispose();
+world.delete();
 ```

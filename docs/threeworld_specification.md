@@ -1,7 +1,7 @@
 # `ThreeWorld` Class Interface Specification
 
 ## 1. Overview
-`ThreeWorld` manages a perspective camera, WebGPU renderer, frame timer, keyboard state, and the lifecycle of keyed `SceneController` instances. Each controller owns its own `THREE.Scene`.
+`ThreeWorld` manages a perspective camera, WebGPU renderer, frame timer, optional camera controls, and the lifecycle of keyed `SceneController` instances. Each controller owns its own `THREE.Scene`; keyboard state is supplied by the configured controls.
 
 * **Dependencies:** `three/webgpu`, `SceneController`
 * **Export Format:** `export default class ThreeWorld`, re-exported as `ThreeWorld` from `src/s-three-extensions/index.ts`
@@ -25,7 +25,7 @@
 Creates a `PerspectiveCamera`, a `WebGPURenderer`, and a `THREE.Timer`.
 
 * **Parameters:** `canvas` is passed to the renderer; `width` and `height` set its initial size and the camera aspect ratio.
-* **Initial Behavior:** Configures the camera with the defaults above, creates the renderer with antialiasing enabled, connects the timer to `document`, and registers window `keydown` and `keyup` listeners to track pressed `KeyboardEvent.code` values.
+* **Initial Behavior:** Configures the camera with the defaults above, creates the renderer with antialiasing enabled, and connects the timer to `document`.
 
 ---
 
@@ -36,13 +36,11 @@ Creates a `PerspectiveCamera`, a `WebGPURenderer`, and a `THREE.Timer`.
 | `camera` | `THREE.PerspectiveCamera` | Read-only | The internal perspective camera. |
 | `renderer` | `THREE.WebGPURenderer` | Read-only | The internal WebGPU renderer. |
 | `domElement` | `HTMLCanvasElement` | Read-only | The renderer's canvas (`renderer.domElement`). |
+| `controls` | `AbstractControls \| null` | Read-only | The configured camera controls, or `null` if none have been set. |
 
 ---
 
 ## 5. Methods
-
-### `isKeyPressed(key: string): boolean`
-Reports whether the specified keyboard code is currently pressed. Pass a `KeyboardEvent.code` value such as `"KeyW"` or `"ArrowUp"`.
 
 ### `addScene(key: string, scene: SceneController): void`
 Initializes the controller with this world and registers it under `key`.
@@ -53,19 +51,22 @@ Requests a transition to a registered controller. Returns `false` if `key` is no
 ### `setCameraPosition(x: number, y: number, z: number): void`
 Sets the camera's world position.
 
+### `setControls(func: (camera: THREE.Camera, domElement: HTMLCanvasElement) => AbstractControls): void`
+Creates and stores camera controls using the provided factory. The controls are updated once per frame before the active scene's `update()` call. Configure controls before starting the world when scene input is needed. A previously configured controls instance is not disposed automatically when replaced.
+
 ### `resize(width: number, height: number): void`
 Updates the camera aspect ratio and projection matrix, then updates the renderer size.
 
 ### `async start(startScene: string): Promise<void>`
-Initializes the renderer, selects the registered controller for `startScene`, calls its `start()` method, and installs the render loop. If no controller is registered for the key, the method returns without starting the loop. Each frame updates the timer, applies any pending scene transition, calls the active controller's `update(delta)` with elapsed seconds since the previous frame, then renders its `scene` with the internal camera.
+Initializes the renderer, selects the registered controller for `startScene`, calls its `start()` method, and installs the render loop. If no controller is registered for the key, the method returns without starting the loop. Each frame updates the timer, clamps elapsed `delta` to at most `0.1` seconds, applies any pending scene transition, updates configured controls, calls the active controller's `update(delta)`, then renders its `scene` with the internal camera.
 
 ### `delete(): void`
-Marks the instance as disposed, calls `delete()` on the active controller if present, removes the window keyboard listeners, and disconnects and disposes the timer. The renderer is not explicitly disposed by this method.
+Marks the instance as disposed, calls `delete()` on the active controller if present, and disconnects and disposes the timer. The configured controls and renderer are not explicitly disposed by this method; dispose the controls separately when needed.
 
 ---
 
 ## 6. SceneController Relationship
-`SceneController` owns the `THREE.Scene` and receives the `ThreeWorld` instance through `init(world)`, normally called by `addScene()`. It exposes the scene, camera, and canvas, and requires implementations of `start(): void` and `update(delta: number): void`. Controllers can request keyed transitions with the protected `loadScene()` method. Mesh helper methods such as `addMesh()` and `removeMesh()` belong to the controller.
+`SceneController` owns the `THREE.Scene` and receives the `ThreeWorld` instance through `init(world)`, normally called by `addScene()`. It exposes the scene, camera, and canvas, and requires implementations of `start(): void` and `update(delta: number): void`. Controllers can request keyed transitions with the protected `loadScene()` method and query configured controls' key state with `isKeyPressed()`. Mesh helper methods such as `addMesh()` and `removeMesh()` belong to the controller.
 
 ---
 
@@ -75,6 +76,7 @@ Marks the instance as disposed, calls `delete()` on the active controller if pre
 import * as THREE from "three/webgpu";
 import ThreeWorld from "./ThreeWorld";
 import { SceneController } from "./SceneController";
+import StudioControls from "./controls/StudioControls";
 
 class SampleScene extends SceneController {
     private cube: THREE.Mesh | null = null;
@@ -106,6 +108,7 @@ class SampleScene extends SceneController {
 
 const canvas = document.querySelector<HTMLCanvasElement>("#app-canvas")!;
 const world = new ThreeWorld(canvas, window.innerWidth, window.innerHeight);
+world.setControls((camera, domElement) => new StudioControls(camera, domElement));
 world.addScene("sample", new SampleScene());
 
 window.addEventListener("resize", () => {
@@ -115,5 +118,6 @@ window.addEventListener("resize", () => {
 await world.start("sample");
 
 // On teardown:
-// world.delete();
+world.controls?.dispose();
+world.delete();
 ```
