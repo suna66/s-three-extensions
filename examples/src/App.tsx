@@ -1,13 +1,13 @@
 import { useEffect } from "react";
-import { ThreeWorld, SceneController, StudioControls, PhysicsWorld, IntegrateObject } from "../../src/s-three-extensions";
+import { ThreeWorld, SceneController, StudioControls, SceneObject } from "../../src/s-three-extensions";
 import * as THREE from "three";
 
 
 class MainScene extends SceneController {
-    private _cube: IntegrateObject | null = null;
+    private _cube: SceneObject | null = null;
     
     public start() {
-        this._cube = new IntegrateObject(() => {
+        this._cube = new SceneObject(() => {
             const geometry = new THREE.BoxGeometry();
             const material = new THREE.MeshNormalMaterial();
             const mesh = new THREE.Mesh(geometry, material);
@@ -18,28 +18,20 @@ class MainScene extends SceneController {
 
     public update(_delta: number) {
         if (this.isKeyPressed("Space")) {
-            this.loadScene("sub", false);
-        }
-    }
-
-    public delete() {
-        if (this._cube) {
-            this.removeMesh(this._cube.mesh!);
-            this._cube.dispose(true);
+            this.addScene("sub", new SubScene());
+            this.loadScene("sub");
         }
     }
 }
 
 class SubScene extends SceneController {
-    private _physicsWorld: PhysicsWorld | null = null;
+    private _sphere: SceneObject | null = null;
+    private _ground: SceneObject | null = null;
 
-    private _sphere: IntegrateObject | null = null;
-    private _ground: IntegrateObject | null = null;
-    
     public async start() {
-        this._physicsWorld = await PhysicsWorld.create();
+        await this.initPhysics();
 
-        this._sphere = new IntegrateObject(() => {
+        this._sphere = new SceneObject(() => {
             const geometry = new THREE.SphereGeometry(1, 32, 32);
             const material = new THREE.MeshNormalMaterial();
             const cube = new THREE.Mesh(geometry, material);
@@ -47,7 +39,7 @@ class SubScene extends SceneController {
         });
         this.addMesh(this._sphere);
 
-        this._ground = new IntegrateObject(() => {
+        this._ground = new SceneObject(() => {
             const groundGeometry = new THREE.PlaneGeometry(10, 10);
             const groundMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
             const ground = new THREE.Mesh(groundGeometry, groundMaterial);
@@ -69,24 +61,15 @@ class SubScene extends SceneController {
 
     }
 
-    public update(delta: number) {
-        this._physicsWorld?.step(delta);
+    public update(_delta: number) {
         // Update scene objects here
         if (this.isKeyPressed("Space")) {
-            this.loadScene("main", false);
+            this.addScene("main", new MainScene());
+            this.loadScene("main");
         }
     }
 
     public delete() {
-        this._physicsWorld?.dispose();
-        if (this._sphere) {
-            this.removeMesh(this._sphere);
-            this._sphere.dispose(true);
-        }
-        if (this._ground) {
-            this.removeMesh(this._ground);
-            this._ground.dispose(true);
-        }
     }
 }
 
@@ -102,8 +85,6 @@ function App() {
         });
 
         const mainScene = new MainScene();
-        const subScene = new SubScene();
-        threeWorld.addScene("sub", subScene);
         threeWorld.addScene("main", mainScene); 
         threeWorld.start("main");
         threeWorld.setControls(

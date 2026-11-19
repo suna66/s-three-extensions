@@ -126,6 +126,7 @@ export default class ThreeWorld {
                 if (this._currentScene) {
                     if (this._switchSceneInfo.deleteFlag) {
                         this._currentScene.delete();
+                        this._currentScene.dispose();
                         this._sceneStack.delete(this._currentSceneKey);
                     } else {
                         this._currentScene.suspend();
@@ -142,7 +143,7 @@ export default class ThreeWorld {
             }
 
             if (this._currentScene) {
-                this._currentScene.update(delta);
+                this._currentScene.animate(delta);
                 this._renderer.render(this._currentScene.scene, this._camera);
             }
         };

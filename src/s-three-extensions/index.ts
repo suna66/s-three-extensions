@@ -8,7 +8,7 @@ import {
     type ColliderMeta,
 } from "./PhysicsWorld";
 import { addResizeCallback, removeResizeCallback } from "./ExtensionUtils";
-import IntegrateObject from "./IntegrateObject";
+import SceneObject from "./SceneObject";
 import type {
     BodyType,
     ColliderShapeSpec,
@@ -24,7 +24,7 @@ export {
     SceneController,
     PhysicsBodyHandle,
     PhysicsWorld,
-    IntegrateObject,
+    SceneObject,
     addResizeCallback,
     removeResizeCallback,
     type ColliderMeta,

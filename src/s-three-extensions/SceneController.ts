@@ -1,10 +1,13 @@
 import * as THREE from "three/webgpu";
 import ThreeWorld from "./ThreeWorld";
-import IntegrateObject from "./IntegrateObject";
+import SceneObject from "./SceneObject";
+import { PhysicsWorld } from "./PhysicsWorld";
 
 export abstract class SceneController {
     protected _scene: THREE.Scene;
     protected _world: ThreeWorld | null = null;
+    protected _physicsWorld: PhysicsWorld | null = null;
+    protected _sceneObjects: Set<SceneObject> = new Set();
     private _suspended: boolean = false;
 
     constructor() {
@@ -14,6 +17,11 @@ export abstract class SceneController {
     public init(space: ThreeWorld) {
         this._world = space;
         this._suspended = false;
+        this._physicsWorld = null;
+    }
+
+    public async initPhysics() {
+        this._physicsWorld = await PhysicsWorld.create();
     }
 
     public get scene(): THREE.Scene {
@@ -33,11 +41,25 @@ export abstract class SceneController {
         return this._suspended;
     }
 
+    public get physicsWorld(): PhysicsWorld | null {
+        return this._physicsWorld;
+    }
+
     public abstract start(): void;
     public abstract update(delta: number): void;
     public stop() {}
     public restart() {}
     public delete() {}
+
+    public animate(delta: number) {
+        if (this._physicsWorld) {
+            this._physicsWorld.step(delta);
+        }
+        for (const obj of this._sceneObjects) {
+            obj.update(delta);
+        }
+        this.update(delta);
+    }
 
     /** @internal */
     public suspend() {
@@ -55,9 +77,26 @@ export abstract class SceneController {
         this._suspended = false;
     }
 
+    /** @internal */
+    public dispose(deleteMeshMaterial: boolean = false) {
+        for (const obj of this._sceneObjects) {
+            if (obj.mesh) {
+                this._scene.remove(obj.mesh);
+            }
+            obj.dispose(deleteMeshMaterial);
+        }
+        this._sceneObjects = new Set();
+    }
+
     protected loadScene(key: string, isDelete: boolean = true) {
         if (this._world) {
             this._world.loadScene(key, isDelete);
+        }
+    }
+
+    protected addScene(key: string, scene: SceneController) {
+        if (this._world) {
+            this._world.addScene(key, scene);
         }
     }
 
@@ -65,23 +104,17 @@ export abstract class SceneController {
         return this._world?.controls?.getKeyState(key) ?? false;
     }
 
-    protected addMesh(mesh: THREE.Mesh | IntegrateObject) {
-        if (mesh instanceof IntegrateObject) {
-            if (mesh.mesh) {
-                this._scene.add(mesh.mesh);
-            }
-        } else {
-            this._scene.add(mesh);
+    protected addMesh(mesh: SceneObject) {
+        this._sceneObjects.add(mesh);
+        if (mesh.mesh) {
+            this._scene.add(mesh.mesh);
         }
     }
 
-    protected removeMesh(mesh: THREE.Mesh | IntegrateObject) {
-        if (mesh instanceof IntegrateObject) {
-            if (mesh.mesh) {
-                this._scene.remove(mesh.mesh);
-            }
-        } else {
-            this._scene.remove(mesh);
+    protected removeMesh(mesh: SceneObject) {
+        if (mesh.mesh) {
+            this._scene.remove(mesh.mesh);
         }
+        this._sceneObjects.delete(mesh);
     }
 }

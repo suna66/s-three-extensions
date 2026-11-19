@@ -1,9 +1,16 @@
 import * as THREE from "three";
 import type { PhysicsBodyHandle } from "./PhysicsWorld";
 
-export default class IntegrateObject {
+export default class SceneObject {
     private _mesh: THREE.Mesh | null = null;
     private _physicsBodyHandle: PhysicsBodyHandle | null = null;
+    private _updateFunction:
+        | ((
+              delta: number,
+              mesh: THREE.Mesh,
+              bodyHandle: PhysicsBodyHandle | null,
+          ) => void)
+        | null = null;
 
     constructor(mesh: (() => THREE.Mesh) | THREE.Mesh | null = null) {
         if (typeof mesh === "function") {
@@ -34,8 +41,36 @@ export default class IntegrateObject {
         this._physicsBodyHandle = func(this._mesh);
     }
 
-    public dispose(isDelete: boolean = false) {
-        if (isDelete && this._mesh !== null) {
+    public setPhysicsMesh(
+        meshFunc: () => THREE.Mesh,
+        physicsFunc: (mesh: THREE.Mesh) => PhysicsBodyHandle,
+    ) {
+        this._mesh = meshFunc();
+        this._physicsBodyHandle = physicsFunc(this._mesh);
+    }
+
+    public addUpdateFunction(
+        func: (
+            delta: number,
+            mesh: THREE.Mesh,
+            bodyHandle: PhysicsBodyHandle | null,
+        ) => void,
+    ) {
+        if (this._mesh === null) {
+            return;
+        }
+        this._updateFunction = func;
+    }
+
+    // @local
+    public update(delta: number) {
+        if (this._updateFunction && this._mesh) {
+            this._updateFunction(delta, this._mesh, this._physicsBodyHandle);
+        }
+    }
+
+    public dispose(deleteMeshMaterial: boolean = false) {
+        if (deleteMeshMaterial && this._mesh !== null) {
             this._mesh.geometry.dispose();
             if (Array.isArray(this._mesh.material)) {
                 this._mesh.material.forEach((material) => material.dispose());
