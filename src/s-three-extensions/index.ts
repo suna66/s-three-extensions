@@ -7,7 +7,12 @@ import {
     PhysicsWorld,
     type ColliderMeta,
 } from "./PhysicsWorld";
-import { addResizeCallback, removeResizeCallback } from "./ExtensionUtils";
+import {
+    addResizeCallback,
+    removeResizeCallback,
+    disposeMesh,
+    disposeLight,
+} from "./ExtensionUtils";
 import SceneObject from "./SceneObject";
 import type {
     BodyType,
@@ -27,6 +32,8 @@ export {
     SceneObject,
     addResizeCallback,
     removeResizeCallback,
+    disposeMesh,
+    disposeLight,
     type ColliderMeta,
     type BodyType,
     type ColliderShapeSpec,

@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import type { PhysicsBodyHandle } from "./PhysicsWorld";
+import { disposeMesh } from "./ExtensionUtils";
 
 export default class SceneObject {
     private _mesh: THREE.Mesh | null = null;
@@ -70,17 +71,7 @@ export default class SceneObject {
     }
 
     public dispose(deleteMeshMaterial: boolean = false) {
-        if (deleteMeshMaterial && this._mesh !== null) {
-            this._mesh.geometry.dispose();
-            if (Array.isArray(this._mesh.material)) {
-                this._mesh.material.forEach((material) => material.dispose());
-            } else {
-                this._mesh.material.dispose();
-            }
-        }
-        if (this._physicsBodyHandle !== null) {
-            this._physicsBodyHandle.dispose();
-        }
+        disposeMesh(this._mesh, deleteMeshMaterial);
         this._mesh = null;
         this._physicsBodyHandle = null;
     }
