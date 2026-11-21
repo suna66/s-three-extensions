@@ -5,6 +5,7 @@ import {
     StudioControls,
     SceneObject,
     disposeLight,
+    BasicControls,
 } from "../../src/s-three-extensions";
 import * as THREE from "three";
 
@@ -12,6 +13,7 @@ class MainScene extends SceneController {
     private _cube: SceneObject | null = null;
 
     public start() {
+        this.setController(new StudioControls(this.camera, this.domElement));
         this._cube = new SceneObject(() => {
             const geometry = new THREE.BoxGeometry();
             const material = new THREE.MeshNormalMaterial();
@@ -36,10 +38,13 @@ class MainScene extends SceneController {
 
 class SubScene extends SceneController {
     private _sphere: SceneObject | null = null;
+    private _box: SceneObject | null = null;
     private _ground: SceneObject | null = null;
 
     public async start() {
         await this.initPhysics();
+        this.setController(new StudioControls(this.camera, this.domElement));
+        this.physicsDebug = true;
 
         this._sphere = new SceneObject(() => {
             const geometry = new THREE.SphereGeometry(1, 32, 32);
@@ -48,6 +53,15 @@ class SubScene extends SceneController {
             return cube;
         });
         this.addMesh(this._sphere);
+
+        this._box = new SceneObject(() => {
+            const geometry = new THREE.BoxGeometry(1, 1, 1);
+            const material = new THREE.MeshNormalMaterial();
+            const cube = new THREE.Mesh(geometry, material);
+            cube.position.set(0, 10, 0);
+            return cube;
+        });
+        this.addMesh(this._box);
 
         this._ground = new SceneObject(() => {
             const groundGeometry = new THREE.PlaneGeometry(10, 10);
@@ -66,7 +80,7 @@ class SubScene extends SceneController {
                 type: "fixed",
                 colliders: [
                     {
-                        shape: { type: "box", halfExtents: [10, 10, 0.1] },
+                        shape: { type: "box", halfExtents: [5, 5, 0.1] },
                         offset: [0, 0, -0.1],
                         restitution: 0.5,
                     },
@@ -80,6 +94,13 @@ class SubScene extends SceneController {
                 colliders: [
                     { shape: { type: "autoSphere" }, restitution: 0.5 },
                 ],
+            }),
+        );
+
+        this._box.setPhysicalBody((mesh) =>
+            this._physicsWorld!.addBody(mesh, {
+                type: "dynamic",
+                colliders: [{ shape: { type: "autoBox" }, restitution: 0.5 }],
             }),
         );
     }
@@ -129,6 +150,7 @@ class BatchScene extends SceneController {
     }
 
     public async start() {
+        this.setController(new BasicControls(this.camera, this.domElement));
         const cone = new THREE.ConeGeometry(1.0, 2.0);
         const box = new THREE.BoxGeometry(2.0, 2.0, 2.0);
         const sphere = new THREE.SphereGeometry(1.0, 16, 8);
@@ -216,9 +238,6 @@ function App() {
         const mainScene = new MainScene();
         threeWorld.addScene("main", mainScene);
         threeWorld.start("main");
-        threeWorld.setControls(
-            (camera, domElement) => new StudioControls(camera, domElement),
-        );
 
         return () => {
             threeWorld.delete();

@@ -93,6 +93,13 @@ export class PhysicsWorld {
         return this.isDisposed;
     }
 
+    public get debugRenderer(): {
+        vertices: Float32Array;
+        colors: Float32Array;
+    } {
+        return this.world.debugRender();
+    }
+
     public dispose(): void {
         if (this.isDisposed) return;
         this.isDisposed = true;
@@ -404,12 +411,19 @@ export class PhysicsWorld {
                     box.expandByPoint(v);
                 }
 
-                const sphere = new THREE.Sphere();
-                box.getBoundingSphere(sphere);
-                autoOffset.copy(sphere.center);
+                box.getCenter(autoOffset);
+
+                let maxRadiusSq = 0;
+                for (let i = 0; i < vertices.length; i += 3) {
+                    v.set(vertices[i], vertices[i + 1], vertices[i + 2]);
+                    maxRadiusSq = Math.max(
+                        maxRadiusSq,
+                        autoOffset.distanceToSquared(v),
+                    );
+                }
 
                 return {
-                    desc: RAPIER.ColliderDesc.ball(sphere.radius),
+                    desc: RAPIER.ColliderDesc.ball(Math.sqrt(maxRadiusSq)),
                     autoOffset,
                 };
             }

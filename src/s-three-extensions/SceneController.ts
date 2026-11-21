@@ -2,14 +2,18 @@ import * as THREE from "three/webgpu";
 import ThreeWorld from "./ThreeWorld";
 import SceneObject from "./SceneObject";
 import { PhysicsWorld } from "./PhysicsWorld";
+import type AbstractControls from "./controls/AbstractControls";
 
 export abstract class SceneController {
     protected _scene: THREE.Scene;
     protected _world: ThreeWorld | null = null;
     protected _physicsWorld: PhysicsWorld | null = null;
     protected _sceneObjects: Set<SceneObject> | null = null;
+    private _controller: AbstractControls | null = null;
     private _lights: Array<THREE.Light> = [];
     private _suspended: boolean = false;
+    private _isDebug: boolean = false;
+    private _debugMesh: THREE.LineSegments | null = null;
 
     constructor() {
         this._scene = new THREE.Scene();
@@ -19,6 +23,7 @@ export abstract class SceneController {
         this._world = space;
         this._suspended = false;
         this._physicsWorld = null;
+        this._isDebug = false;
         this._sceneObjects = new Set();
     }
 
@@ -38,6 +43,37 @@ export abstract class SceneController {
         return this._world!.domElement;
     }
 
+    public get controller(): AbstractControls | null {
+        return this._controller;
+    }
+
+    public set physicsDebug(sw: boolean) {
+        if (sw) {
+            if (!this._isDebug) {
+                this._debugMesh = new THREE.LineSegments(
+                    new THREE.BufferGeometry(),
+                    new THREE.LineBasicMaterial({
+                        color: 0x00ff00,
+                        vertexColors: true,
+                    }),
+                );
+                this._debugMesh.frustumCulled = false;
+                this._isDebug = true;
+                this.scene.add(this._debugMesh);
+            }
+        } else {
+            if (this._isDebug) {
+                if (this._debugMesh) this.scene.remove(this._debugMesh);
+                this._debugMesh = null;
+                this._isDebug = false;
+            }
+        }
+    }
+
+    public get physicsDebug() {
+        return this._isDebug;
+    }
+
     /** @internal */
     public get suspended(): boolean {
         return this._suspended;
@@ -53,15 +89,35 @@ export abstract class SceneController {
     public restart() {}
     public delete() {}
 
+    public setController(controller: AbstractControls) {
+        this._controller = controller;
+    }
+
     public animate(delta: number) {
         if (this._physicsWorld) {
             this._physicsWorld.step(delta);
+        }
+        if (this._controller) {
+            this._controller.update(delta);
         }
         if (this._sceneObjects == null) {
             return;
         }
         for (const obj of this._sceneObjects) {
             obj.update(delta);
+        }
+        if (this._isDebug && this._physicsWorld) {
+            const { vertices, colors } = this._physicsWorld.debugRenderer;
+            if (this._debugMesh != null) {
+                this._debugMesh.geometry.setAttribute(
+                    "position",
+                    new THREE.BufferAttribute(vertices, 3),
+                );
+                this._debugMesh.geometry.setAttribute(
+                    "color",
+                    new THREE.BufferAttribute(colors, 4),
+                );
+            }
         }
         this.update(delta);
     }
@@ -88,6 +144,10 @@ export abstract class SceneController {
         if (this._physicsWorld) {
             this._physicsWorld.dispose();
         }
+        if (this._controller) {
+            this._controller.dispose();
+        }
+        this.physicsDebug = false;
     }
 
     protected loadScene(key: string, isDelete: boolean = true) {
@@ -103,7 +163,7 @@ export abstract class SceneController {
     }
 
     protected isKeyPressed(key: string): boolean {
-        return this._world?.controls?.getKeyState(key) ?? false;
+        return this._controller?.getKeyState(key) ?? false;
     }
 
     protected addMesh(mesh: SceneObject) {

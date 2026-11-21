@@ -3,6 +3,7 @@ import type { PhysicsBodyHandle } from "./PhysicsWorld";
 import { disposeMesh } from "./ExtensionUtils";
 
 export default class SceneObject {
+    private _tag: string | null = null;
     private _mesh: THREE.Mesh | null = null;
     private _physicsBodyHandle: PhysicsBodyHandle | null = null;
     private _updateFunction:
@@ -19,6 +20,14 @@ export default class SceneObject {
         } else {
             this._mesh = mesh;
         }
+    }
+
+    public set tag(value: string) {
+        this._tag = value;
+    }
+
+    public get tag(): string | null {
+        return this._tag;
     }
 
     public get mesh(): THREE.Mesh | null {

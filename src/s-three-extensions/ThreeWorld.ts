@@ -1,6 +1,5 @@
 import * as THREE from "three/webgpu";
 import { SceneController } from "./SceneController";
-import AbstractControls from "./controls/AbstractControls.js";
 
 const DEFAULT_FOV = 75;
 const DEFAULT_NEAR = 0.1;
@@ -24,7 +23,6 @@ export default class ThreeWorld {
     private _nextScene: SceneController | null = null;
     private _switchSceneInfo: SwitchSceneInfo;
     private _sceneStack: Map<string, SceneController>;
-    private _controls: AbstractControls | null = null;
 
     constructor(canvas: HTMLCanvasElement, width: number, height: number) {
         this._camera = new THREE.PerspectiveCamera(
@@ -50,10 +48,6 @@ export default class ThreeWorld {
             deleteFlag: false,
             switchScene: false,
         };
-    }
-
-    public get controls() {
-        return this._controls;
     }
 
     public get camera() {
@@ -88,15 +82,6 @@ export default class ThreeWorld {
         this._camera.position.set(x, y, z);
     }
 
-    public setControls(
-        func: (
-            camera: THREE.Camera,
-            domElement: HTMLCanvasElement,
-        ) => AbstractControls,
-    ) {
-        this._controls = func(this.camera, this.domElement);
-    }
-
     public resize(width: number, height: number) {
         this._camera.aspect = width / height;
         this._camera.updateProjectionMatrix();
@@ -120,9 +105,6 @@ export default class ThreeWorld {
             delta = Math.min(this._timer.getDelta(), 0.1);
 
             if (this._switchSceneInfo.switchScene) {
-                if (this._controls) {
-                    this._controls.flash();
-                }
                 if (this._currentScene) {
                     if (this._switchSceneInfo.deleteFlag) {
                         this._currentScene.delete();
@@ -136,10 +118,6 @@ export default class ThreeWorld {
                 this._currentSceneKey = this._switchSceneInfo.key;
                 this._switchSceneInfo.deleteFlag = false;
                 this._switchSceneInfo.switchScene = false;
-            }
-
-            if (this.controls) {
-                this.controls.update(delta);
             }
 
             if (this._currentScene) {
