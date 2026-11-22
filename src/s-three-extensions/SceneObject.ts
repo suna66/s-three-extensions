@@ -80,8 +80,10 @@ export default class SceneObject {
     }
 
     public dispose(deleteMeshMaterial: boolean = false) {
+        this._physicsBodyHandle?.dispose();
+        this._physicsBodyHandle = null;
         disposeMesh(this._mesh, deleteMeshMaterial);
         this._mesh = null;
-        this._physicsBodyHandle = null;
+        this._updateFunction = null;
     }
 }

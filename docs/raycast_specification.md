@@ -55,7 +55,7 @@ class PickingScene extends SceneController {
                 new THREE.MeshNormalMaterial(),
             ),
         );
-        this.addMesh(this.box);
+        this.addSceneObject(this.box);
 
         const ray = new Raycast(this.domElement, this.camera);
         const targets: THREE.Object3D[] = [this.box.mesh!];
@@ -76,7 +76,7 @@ class PickingScene extends SceneController {
     public update(_delta: number): void {}
 
     public override delete(): void {
-        this.removeAllMesh();
+        this.removeAllSceneObjects();
         this.box?.dispose(true);
     }
 }

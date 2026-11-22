@@ -22,7 +22,7 @@ class MainScene extends SceneController {
             const mesh = new THREE.Mesh(geometry, material);
             return mesh;
         });
-        this.addMesh(this._cube);
+        this.addSceneObject(this._cube);
     }
 
     public update(_delta: number) {
@@ -33,7 +33,7 @@ class MainScene extends SceneController {
     }
 
     public delete() {
-        this.removeAllMesh();
+        this.removeAllSceneObjects();
         this._cube?.dispose(true);
     }
 }
@@ -54,7 +54,7 @@ class SubScene extends SceneController {
             const cube = new THREE.Mesh(geometry, material);
             return cube;
         });
-        this.addMesh(this._sphere);
+        this.addSceneObject(this._sphere);
 
         this._box = new SceneObject(() => {
             const geometry = new THREE.BoxGeometry(1, 1, 1);
@@ -63,7 +63,7 @@ class SubScene extends SceneController {
             cube.position.set(0, 10, 0);
             return cube;
         });
-        this.addMesh(this._box);
+        this.addSceneObject(this._box);
 
         this._ground = new SceneObject(() => {
             const groundGeometry = new THREE.PlaneGeometry(10, 10);
@@ -75,7 +75,7 @@ class SubScene extends SceneController {
             ground.position.y = -3;
             return ground;
         });
-        this.addMesh(this._ground);
+        this.addSceneObject(this._ground);
 
         this._ground.setPhysicalBody((mesh) =>
             this._physicsWorld!.addBody(mesh, {
@@ -142,7 +142,7 @@ class SubScene extends SceneController {
     }
 
     public delete() {
-        this.removeAllMesh();
+        this.removeAllSceneObjects();
         this._ground?.dispose(true);
         this._sphere?.dispose(true);
     }
@@ -233,7 +233,7 @@ class BatchScene extends SceneController {
         }
 
         this._batch = new SceneObject(mesh);
-        this.addMesh(this._batch);
+        this.addSceneObject(this._batch);
     }
 
     public update(_delta: number) {

@@ -71,7 +71,7 @@ class MainScene extends SceneController {
         new THREE.MeshNormalMaterial(),
       );
     });
-    this.addMesh(this._cube);
+    this.addSceneObject(this._cube);
   }
 
   public update(_delta: number): void {
@@ -79,7 +79,7 @@ class MainScene extends SceneController {
   }
 
   public override delete(): void {
-    this.removeAllMesh();
+    this.removeAllSceneObjects();
     this._cube?.dispose(true);
   }
 }
@@ -98,7 +98,7 @@ class PhysicsScene extends SceneController {
         new THREE.MeshNormalMaterial(),
       );
     });
-    this.addMesh(this._sphere);
+    this.addSceneObject(this._sphere);
 
     this._ground = new SceneObject(() => {
       const mesh = new THREE.Mesh(
@@ -109,7 +109,7 @@ class PhysicsScene extends SceneController {
       mesh.position.y = -3;
       return mesh;
     });
-    this.addMesh(this._ground);
+    this.addSceneObject(this._ground);
 
     this._ground.setPhysicalBody((mesh) =>
       this.physicsWorld!.addBody(mesh, {
@@ -130,7 +130,7 @@ class PhysicsScene extends SceneController {
   }
 
   public override delete(): void {
-    this.removeAllMesh();
+    this.removeAllSceneObjects();
     this._sphere?.dispose(true);
     this._ground?.dispose(true);
   }

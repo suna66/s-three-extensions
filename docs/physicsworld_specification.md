@@ -44,7 +44,7 @@ Removes the rigid body's current colliders and creates replacements from `specs`
 ### `removeObject(object: THREE.Object3D): void`
 Removes the registered body's colliders and rigid body. Does nothing if the object is not registered. This does not remove the object from the Three.js scene or dispose its geometry/materials.
 
-### `getPhysicBodyHandler(obj: THREE.Object3D): PhysicsBodyHandle | null`
+### `getPhysicsBodyHandle(obj: THREE.Object3D): PhysicsBodyHandle | null`
 Returns the `PhysicsBodyHandle` registered for `obj`, or `null` if no body is registered for it.
 
 ---

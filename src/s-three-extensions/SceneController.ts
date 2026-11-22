@@ -1,4 +1,4 @@
-import * as THREE from "three/webgpu";
+import * as THREE from "three";
 import ThreeWorld from "./ThreeWorld";
 import SceneObject from "./SceneObject";
 import { PhysicsWorld } from "./PhysicsWorld";
@@ -27,11 +27,21 @@ export abstract class SceneController {
         this._suspended = false;
         this._physicsWorld = null;
         this._isDebug = false;
+        this._enablePhysicsActiveEvent = false;
+        if (this._physicsEventDispose) {
+            this._physicsEventDispose();
+            this._physicsEventDispose = null;
+        }
         this._sceneObjects = new Set();
     }
 
     public async initPhysics() {
         this._physicsWorld = await PhysicsWorld.create();
+        if (this._enablePhysicsActiveEvent && !this._physicsEventDispose) {
+            this._physicsEventDispose = this._physicsWorld.onCollision(
+                this.physicsActiveEvent,
+            );
+        }
     }
 
     public get scene(): THREE.Scene {
@@ -66,7 +76,15 @@ export abstract class SceneController {
             }
         } else {
             if (this._isDebug) {
-                if (this._debugMesh) this.scene.remove(this._debugMesh);
+                if (this._debugMesh) {
+                    this.scene.remove(this._debugMesh);
+                    this._debugMesh.geometry.dispose();
+                    if (Array.isArray(this._debugMesh.material)) {
+                        this._debugMesh.material.forEach((m) => m.dispose());
+                    } else {
+                        this._debugMesh.material.dispose();
+                    }
+                }
                 this._debugMesh = null;
                 this._isDebug = false;
             }
@@ -89,7 +107,7 @@ export abstract class SceneController {
     public set enablePhysicsActiveEvent(sw: boolean) {
         if (sw) {
             if (!this._enablePhysicsActiveEvent) {
-                if (this._physicsWorld) {
+                if (this._physicsWorld && !this._physicsEventDispose) {
                     this._physicsEventDispose = this._physicsWorld.onCollision(
                         this.physicsActiveEvent,
                     );
@@ -97,7 +115,10 @@ export abstract class SceneController {
             }
         } else {
             if (this._enablePhysicsActiveEvent) {
-                if (this._physicsEventDispose) this._physicsEventDispose();
+                if (this._physicsEventDispose) {
+                    this._physicsEventDispose();
+                    this._physicsEventDispose = null;
+                }
             }
         }
         this._enablePhysicsActiveEvent = sw;
@@ -177,6 +198,7 @@ export abstract class SceneController {
             this._physicsEventDispose();
             this._physicsEventDispose = null;
         }
+        this._enablePhysicsActiveEvent = false;
         this.physicsDebug = false;
     }
 
@@ -196,31 +218,31 @@ export abstract class SceneController {
         return this._controller?.getKeyState(key) ?? false;
     }
 
-    protected addMesh(mesh: SceneObject) {
+    protected addSceneObject(sceneObject: SceneObject) {
         if (this._sceneObjects == null) {
             this._sceneObjects = new Set();
         }
-        this._sceneObjects.add(mesh);
-        if (mesh.mesh) {
-            this._scene.add(mesh.mesh);
+        this._sceneObjects.add(sceneObject);
+        if (sceneObject.mesh) {
+            this._scene.add(sceneObject.mesh);
         }
     }
 
-    protected removeMesh(mesh: SceneObject) {
-        if (mesh.mesh) {
-            this._scene.remove(mesh.mesh);
+    protected removeSceneObject(sceneObject: SceneObject) {
+        if (sceneObject.mesh) {
+            this._scene.remove(sceneObject.mesh);
         }
         if (this._sceneObjects) {
-            this._sceneObjects.delete(mesh);
+            this._sceneObjects.delete(sceneObject);
         }
     }
 
-    protected removeAllMesh() {
+    protected removeAllSceneObjects() {
         if (this._sceneObjects == null) {
             return;
         }
         for (const obj of this._sceneObjects) {
-            this.removeMesh(obj);
+            this.removeSceneObject(obj);
         }
     }
 

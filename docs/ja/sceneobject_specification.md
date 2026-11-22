@@ -1,7 +1,7 @@
 # `SceneObject` クラス インターフェース仕様
 
 ## 1. 概要
-`SceneObject` はThree.jsの `Mesh` と任意の `PhysicsBodyHandle`、任意の `tag`、および毎フレーム実行される更新コールバックをまとめて管理します。`SceneController.addMesh()` でシーンに登録すると、毎フレーム `update(delta)` が自動的に呼び出されます。
+`SceneObject` はThree.jsの `Mesh` と任意の `PhysicsBodyHandle`、任意の `tag`、および毎フレーム実行される更新コールバックをまとめて管理します。`SceneController.addSceneObject()` でシーンに登録すると、毎フレーム `update(delta)` が自動的に呼び出されます。
 
 * **依存関係:** `three`、`PhysicsBodyHandle`、`ExtensionUtils`（`disposeMesh`）
 * **エクスポート形式:** `export default class SceneObject`。`src/s-three-extensions/index.ts` から `SceneObject` として再エクスポートされます。
@@ -43,7 +43,7 @@
 更新コールバックとメッシュの両方が設定されている場合、`(delta, mesh, physicsBodyHandle)` を引数としてコールバックを呼び出します。通常は `SceneController.animate()` から自動的に呼ばれます。
 
 ### `dispose(deleteMeshMaterial: boolean = false): void`
-`disposeMesh(this._mesh, deleteMeshMaterial)` を呼び出します（親からの削除、利用可能であれば `mesh.dispose()` の呼び出し、`deleteMeshMaterial` が `true` の場合はジオメトリおよびマテリアルの破棄を行います）。その後、`_mesh` と `_physicsBodyHandle` の参照を `null` にクリアします。このメソッドは `physicsBodyHandle.dispose()` を呼び出さないため、物理ボディや `PhysicsWorld` は必要に応じて別途破棄してください。
+`physicsBodyHandle` が存在する場合は `physicsBodyHandle.dispose()` を呼び出して `PhysicsWorld` から剛体とコライダーを削除し、次に `disposeMesh(this._mesh, deleteMeshMaterial)` を呼び出します（親からの削除、利用可能であれば `mesh.dispose()` の呼び出し、`deleteMeshMaterial` が `true` の場合はジオメトリおよびマテリアルの破棄を行います）。その後、`_mesh`、`_physicsBodyHandle`、`_updateFunction` の参照を `null` にクリアします。
 
 ---
 
@@ -85,13 +85,13 @@ export class PhysicsDemoScene extends SceneController {
             }
         });
 
-        this.addMesh(this.sphere);
+        this.addSceneObject(this.sphere);
     }
 
     public update(_delta: number): void {}
 
     public override delete(): void {
-        this.removeAllMesh();
+        this.removeAllSceneObjects();
         this.sphere?.dispose(true);
     }
 }

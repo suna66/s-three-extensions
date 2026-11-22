@@ -32,7 +32,7 @@
 
 イベントターゲットが `INPUT` または `TEXTAREA` 要素である場合、キーボード入力は無視されます。フライトスルー移動と矢印キーによる回転はフライトスルーモードが有効な間のみ処理されます。このモードはウィンドウの `blur` 時に解除されます。
 
-`StudioControls` インスタンスを `SceneController.controller` に設定すると、`SceneController.animate()` が毎フレーム自動的に更新し、`SceneController.isKeyPressed()` で使用するキー状態も提供されます。また、`AbstractControls` から `getKeyState()`、`flash()`、`dispose()`、`update()` および `mouseDownEvent` / `mouseMoveEvent` / `mouseUpEvent` コールバックセッターを継承しており、自身のポインター処理とあわせてこれらのコールバックも呼び出します。
+`StudioControls` インスタンスを `SceneController.controller` に設定すると、`SceneController.animate()` が毎フレーム自動的に更新し、`SceneController.isKeyPressed()` で使用するキー状態も提供されます。また、`AbstractControls` から `getKeyState()`、`flush()`、`dispose()`、`update()` および `mouseDownEvent` / `mouseMoveEvent` / `mouseUpEvent` コールバックセッターを継承しており、自身のポインター処理とあわせてこれらのコールバックも呼び出します。
 
 ---
 
@@ -92,7 +92,7 @@ OrbitControls のダンピング（慣性）を有効にし、ダンピング係
 ---
 
 ### `dispose(): void`
-`AbstractControls` から継承されています。登録されたイベントリスナーを削除し、ポインターコールバック参照をクリアします。なお、`pointerdown` リスナーは `{ capture: true }` で登録されていますが、解除時はそのオプションなしで削除されるため、生成と破棄を繰り返すと `dom` 上にハンドラーが残る場合があります。
+`AbstractControls` から継承されています。登録されたイベントリスナー（`{ capture: true }` の `pointerdown` リスナーを含む）を削除し、`OrbitControls` を破棄してポインターコールバック参照をクリアします。
 
 * **パラメーター:** なし
 * **戻り値:** `void`

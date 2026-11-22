@@ -44,7 +44,7 @@ RapierのWebAssemblyモジュールを初期化してから、物理ワールド
 ### `removeObject(object: THREE.Object3D): void`
 登録済みの剛体とコライダーを削除します。オブジェクトが登録されていない場合は何もしません。Three.jsシーンからオブジェクトを削除したり、ジオメトリやマテリアルを破棄したりはしません。
 
-### `getPhysicBodyHandler(obj: THREE.Object3D): PhysicsBodyHandle | null`
+### `getPhysicsBodyHandle(obj: THREE.Object3D): PhysicsBodyHandle | null`
 `obj` に対して登録されている `PhysicsBodyHandle` を返します。登録されていない場合は `null` を返します。
 
 ---

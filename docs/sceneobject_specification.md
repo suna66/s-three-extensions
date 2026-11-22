@@ -1,7 +1,7 @@
 # `SceneObject` Class Interface Specification
 
 ## 1. Overview
-`SceneObject` groups a Three.js `Mesh` with an optional `PhysicsBodyHandle`, an optional `tag`, and an optional per-frame update callback. When registered with `SceneController.addMesh()`, its `update(delta)` method is called automatically each frame.
+`SceneObject` groups a Three.js `Mesh` with an optional `PhysicsBodyHandle`, an optional `tag`, and an optional per-frame update callback. When registered with `SceneController.addSceneObject()`, its `update(delta)` method is called automatically each frame.
 
 * **Dependencies:** `three`, `PhysicsBodyHandle`, `ExtensionUtils` (`disposeMesh`)
 * **Export Format:** `export default class SceneObject`, re-exported as `SceneObject` from `src/s-three-extensions/index.ts`
@@ -43,7 +43,7 @@ Registers a per-frame update callback for this object. Does nothing if no mesh i
 Invokes the registered update callback with `(delta, mesh, physicsBodyHandle)` if both an update function and a mesh are present. Normally called automatically by `SceneController.animate()`.
 
 ### `dispose(deleteMeshMaterial: boolean = false): void`
-Calls `disposeMesh(this._mesh, deleteMeshMaterial)` (which removes the mesh from its parent, calls `mesh.dispose()` if available, and disposes geometry and material(s) when `deleteMeshMaterial` is `true`), then clears both `_mesh` and `_physicsBodyHandle` references to `null`. Note that this method does not call `physicsBodyHandle.dispose()`; dispose the `PhysicsBodyHandle` or `PhysicsWorld` separately when needed.
+Calls `physicsBodyHandle.dispose()` (if present) to remove the rigid body and colliders from `PhysicsWorld`, then calls `disposeMesh(this._mesh, deleteMeshMaterial)` (which removes the mesh from its parent, calls `mesh.dispose()` if available, and disposes geometry and material(s) when `deleteMeshMaterial` is `true`), and clears `_mesh`, `_physicsBodyHandle`, and `_updateFunction` references to `null`.
 
 ---
 
@@ -85,13 +85,13 @@ export class PhysicsDemoScene extends SceneController {
             }
         });
 
-        this.addMesh(this.sphere);
+        this.addSceneObject(this.sphere);
     }
 
     public update(_delta: number): void {}
 
     public override delete(): void {
-        this.removeAllMesh();
+        this.removeAllSceneObjects();
         this.sphere?.dispose(true);
     }
 }

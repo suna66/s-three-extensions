@@ -131,10 +131,24 @@ export default class ThreeWorld {
 
     public delete() {
         this._disposed = true;
+        this._renderer.setAnimationLoop(null);
+
+        const scenesToDispose = new Set<SceneController>(
+            this._sceneStack.values(),
+        );
         if (this._currentScene) {
-            this._currentScene.delete();
+            scenesToDispose.add(this._currentScene);
         }
+        for (const scene of scenesToDispose) {
+            scene.delete();
+            scene.dispose();
+        }
+        this._sceneStack.clear();
+        this._currentScene = null;
+        this._nextScene = null;
+
         this._timer.disconnect();
         this._timer.dispose();
+        this._renderer.dispose();
     }
 }

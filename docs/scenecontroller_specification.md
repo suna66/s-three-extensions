@@ -3,7 +3,7 @@
 ## 1. Overview
 `SceneController` is an abstract base class for a scene managed by `ThreeWorld`. It owns a `THREE.Scene`, manages `SceneObject` instances, lights, optional `AbstractControls`, and an optional `PhysicsWorld` (with debug rendering and collision event forwarding), and defines the scene lifecycle hooks.
 
-* **Dependencies:** `three/webgpu`, `ThreeWorld`, `SceneObject`, `PhysicsWorld`, `AbstractControls`, `PhysicsTypes`
+* **Dependencies:** `three`, `ThreeWorld`, `SceneObject`, `PhysicsWorld`, `AbstractControls`, `PhysicsTypes`
 * **Export Format:** `export abstract class SceneController` (named export)
 
 ---
@@ -79,7 +79,7 @@ Optional lifecycle hooks. `stop()` is called when this controller is switched aw
 ---
 
 ### `delete(): void`
-Optional cleanup hook called when the controller is deleted during a scene transition or when `ThreeWorld.delete()` is called while it is active. The base implementation does nothing; subclasses can override it to release their resources (for example, calling `removeAllMesh()`, `removeAllLight()`, and disposing objects).
+Optional cleanup hook called when the controller is deleted during a scene transition or when `ThreeWorld.delete()` is called while it is active. The base implementation does nothing; subclasses can override it to release their resources (for example, calling `removeAllSceneObjects()`, `removeAllLight()`, and disposing objects).
 
 * **Returns:** `void`
 
@@ -126,18 +126,18 @@ Checks whether the given `KeyboardEvent.code` is currently pressed in `this.cont
 
 ---
 
-### `protected addMesh(mesh: SceneObject): void`
-Registers the `SceneObject` in `_sceneObjects` and, if `mesh.mesh` is non-null, adds `mesh.mesh` to `this.scene`.
+### `protected addSceneObject(sceneObject: SceneObject): void`
+Registers the `SceneObject` in `_sceneObjects` and, if `sceneObject.mesh` is non-null, adds `sceneObject.mesh` to `this.scene`.
 
 ---
 
-### `protected removeMesh(mesh: SceneObject): void`
-Removes `mesh.mesh` from `this.scene` (if non-null) and removes `mesh` from `_sceneObjects`. It does not dispose the mesh geometry, material, or textures; call `mesh.dispose(...)` separately when needed.
+### `protected removeSceneObject(sceneObject: SceneObject): void`
+Removes `sceneObject.mesh` from `this.scene` (if non-null) and removes `sceneObject` from `_sceneObjects`. It does not dispose the mesh geometry, material, or textures; call `sceneObject.dispose(...)` separately when needed.
 
 ---
 
-### `protected removeAllMesh(): void`
-Calls `removeMesh()` for every `SceneObject` registered in `_sceneObjects`.
+### `protected removeAllSceneObjects(): void`
+Calls `removeSceneObject()` for every `SceneObject` registered in `_sceneObjects`.
 
 ---
 
@@ -176,7 +176,7 @@ export class SampleScene extends SceneController {
             const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
             return new THREE.Mesh(geometry, material);
         });
-        this.addMesh(this.cube);
+        this.addSceneObject(this.cube);
     }
 
     public update(delta: number): void {
@@ -186,7 +186,7 @@ export class SampleScene extends SceneController {
     }
 
     public override delete(): void {
-        this.removeAllMesh();
+        this.removeAllSceneObjects();
         this.cube?.dispose(true);
     }
 }

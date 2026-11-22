@@ -36,6 +36,8 @@ export type MouseButtons = {
 
 | プロパティ名 | 型 | アクセス | 説明 |
 | :--- | :--- | :--- | :--- |
+| `cameraSpeed` | `number` | 書き込み専用 | フライトスルー移動の速度を設定します（既定値: `5`）。 |
+| `rotateSpeed` | `number` | 書き込み専用 | 矢印キーによる視点回転の速度を設定します（既定値: `1.5`）。 |
 | `mouseDownEvent` | `(e: PointerEvent) => void` | 書き込み専用 | `dom` 上での `pointerdown` 時に呼ばれる任意のコールバックです。 |
 | `mouseMoveEvent` | `(e: PointerEvent) => void` | 書き込み専用 | `dom` 上での `pointermove` 時に呼ばれる任意のコールバックです。 |
 | `mouseUpEvent` | `(e: PointerEvent) => void` | 書き込み専用 | `window` 上での `pointerup` 時に呼ばれる任意のコールバックです。 |
@@ -45,16 +47,22 @@ export type MouseButtons = {
 ## 5. メソッド
 
 ### `getKeyState(key: string): boolean`
-指定した `KeyboardEvent.code` が現在押されているかを返します。イベントターゲットが `INPUT` または `TEXTAREA` の場合、`keydown` 時のキーボード入力は無視されます。`Alt` キーのブラウザー既定動作は `keydown` と `keyup` で抑止されます。キー状態はウィンドウの `blur` 時および `flash()` 呼び出し時にクリアされます。
+指定した `KeyboardEvent.code` が現在押されているかを返します。イベントターゲットが `INPUT` または `TEXTAREA` の場合、`keydown` 時のキーボード入力は無視されます。`Alt` キーのブラウザー既定動作は `keydown` と `keyup` で抑止されます。キー状態はウィンドウの `blur` 時および `flush()` 呼び出し時にクリアされます。
 
-### `flash(): void`
+### `setDamping(factor: number = 0.5): void`
+`OrbitControls` のダンピングを有効にし（`enableDamping = true`）、`dampingFactor` を設定します。
+
+### `disableDamping(): void`
+`OrbitControls` のダンピングを無効にします（`enableDamping = false`）。
+
+### `flush(): void`
 追跡中のキー状態をクリアし、`OrbitControls` のマウスボタン割り当てをサブクラスの `defaultMode()` に戻します。
 
 ### `update(delta: number): void`
 サブクラスの `keyEvent(delta)` フックを呼び出し、内部の `OrbitControls` を更新します。アプリケーションまたは所有元の `SceneController` が毎フレーム呼び出す必要があります。
 
 ### `dispose(): void`
-`setupEvents()` で登録したイベントリスナーを削除し、`mouseDownEvent`、`mouseMoveEvent`、`mouseUpEvent` の参照を `null` にクリアします。なお、`pointerdown` リスナーは `{ capture: true }` で登録されていますが、削除時は capture オプションなしで解除されるため、リスナーが残る場合があります。このメソッドは `OrbitControls.dispose()` を呼び出しません。
+`setupEvents()` で登録したイベントリスナー（`{ capture: true }` の `pointerdown` リスナーを含む）を削除し、内部の `OrbitControls` を破棄（`dispose()`）し、`mouseDownEvent`、`mouseMoveEvent`、`mouseUpEvent` の参照を `null` にクリアします。
 
 ---
 
@@ -62,9 +70,12 @@ export type MouseButtons = {
 
 | フック | 説明 |
 | :--- | :--- |
-| `defaultMode(): MouseButtons` | 既定の `OrbitControls.mouseButtons` 割り当てを返します。初期化時と `flash()` 実行時に使用されます。 |
+| `defaultMode(): MouseButtons` | 既定の `OrbitControls.mouseButtons` 割り当てを返します。初期化時と `flush()` 実行時に使用されます。 |
 | `setupControlOptions(): void` | マウス割り当てとオービットターゲットの初期設定を行います。 |
 | `setupEvents(): void` | ポインター（`dom` 上の `pointerdown` capture、`pointermove`、`contextmenu`、`window` 上の `pointerup`）、キーボード、および `blur` ハンドラーを登録します。 |
+| `cameraMove(direction, moveSpeed): void` | カメラと `OrbitControls.target` を `"FORWARD"`、`"RIGHT"`、または `"UP"` 方向へ移動します。 |
+| `cameraRotate(yawDelta, pitchDelta): void` | カメラのヨーおよびピッチ（$\pm(\frac{\pi}{2} - 0.01)\text{ rad}$ に制限）を回転し、`OrbitControls.target` を更新します。 |
+| `handleFlyThroughKeys(delta): void` | `cameraSpeed` と `rotateSpeed` を用いて `WASDQE` 移動と矢印キー回転を処理します。 |
 | `keyEvent(delta: number): void` | 毎フレームのキーボード処理用抽象フックです。 |
 | `handleMouseDown(e: PointerEvent): void` | ポインター押下ハンドラーです。`mouseDownEvent` が設定されていれば呼び出します（サブクラスでオーバーライド可能）。 |
 | `handleMouseMove(e: PointerEvent): void` | ポインター移動ハンドラーです。`mouseMoveEvent` が設定されていれば呼び出します（サブクラスでオーバーライド可能）。 |

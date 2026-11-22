@@ -90,7 +90,7 @@ export class PhysicsWorld {
         return new PhysicsWorld(gravity);
     }
 
-    public getPhysicBodyHandler(obj: THREE.Object3D): PhysicsBodyHandle | null {
+    public getPhysicsBodyHandle(obj: THREE.Object3D): PhysicsBodyHandle | null {
         return this.bindings.get(obj) ?? null;
     }
 

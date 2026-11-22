@@ -3,7 +3,7 @@
 ## 1. 概要
 `SceneController` は `ThreeWorld` によって管理されるシーンの抽象基底クラスです。`THREE.Scene` を所有し、`SceneObject` インスタンス、ライト、任意の `AbstractControls`、および任意の `PhysicsWorld`（デバッグ描画や衝突イベント転送を含む）を管理し、シーンのライフサイクルフックを定義します。
 
-* **依存関係:** `three/webgpu`、`ThreeWorld`、`SceneObject`、`PhysicsWorld`、`AbstractControls`、`PhysicsTypes`
+* **依存関係:** `three`、`ThreeWorld`、`SceneObject`、`PhysicsWorld`、`AbstractControls`、`PhysicsTypes`
 * **エクスポート形式:** `export abstract class SceneController`（名前付きエクスポート）
 
 ---
@@ -79,7 +79,7 @@
 ---
 
 ### `delete(): void`
-シーン遷移でコントローラーが削除されるとき、またはアクティブな状態で `ThreeWorld.delete()` が呼ばれたときに実行される任意のクリーンアップフックです。基底実装は何も行いません。サブクラスでオーバーライドし、`removeAllMesh()`、`removeAllLight()`、各オブジェクトの `dispose()` などのリソース解放を行えます。
+シーン遷移でコントローラーが削除されるとき、またはアクティブな状態で `ThreeWorld.delete()` が呼ばれたときに実行される任意のクリーンアップフックです。基底実装は何も行いません。サブクラスでオーバーライドし、`removeAllSceneObjects()`、`removeAllLight()`、各オブジェクトの `dispose()` などのリソース解放を行えます。
 
 * **戻り値:** `void`
 
@@ -126,18 +126,18 @@
 
 ---
 
-### `protected addMesh(mesh: SceneObject): void`
-`SceneObject` を `_sceneObjects` に登録し、`mesh.mesh` が `null` でなければ `this.scene` に追加します。
+### `protected addSceneObject(sceneObject: SceneObject): void`
+`SceneObject` を `_sceneObjects` に登録し、`sceneObject.mesh` が `null` でなければ `this.scene` に追加します。
 
 ---
 
-### `protected removeMesh(mesh: SceneObject): void`
-`mesh.mesh` を `this.scene` から削除し（`null` でない場合）、`mesh` を `_sceneObjects` から取り除きます。ジオメトリ、マテリアル、テクスチャの破棄は行わないため、必要に応じて `mesh.dispose(...)` を別途呼び出してください。
+### `protected removeSceneObject(sceneObject: SceneObject): void`
+`sceneObject.mesh` を `this.scene` から削除し（`null` でない場合）、`sceneObject` を `_sceneObjects` から取り除きます。ジオメトリ、マテリアル、テクスチャの破棄は行わないため、必要に応じて `sceneObject.dispose(...)` を別途呼び出してください。
 
 ---
 
-### `protected removeAllMesh(): void`
-`_sceneObjects` に登録されているすべての `SceneObject` に対して `removeMesh()` を呼び出します。
+### `protected removeAllSceneObjects(): void`
+`_sceneObjects` に登録されているすべての `SceneObject` に対して `removeSceneObject()` を呼び出します。
 
 ---
 
@@ -176,7 +176,7 @@ export class SampleScene extends SceneController {
             const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
             return new THREE.Mesh(geometry, material);
         });
-        this.addMesh(this.cube);
+        this.addSceneObject(this.cube);
     }
 
     public update(delta: number): void {
@@ -186,7 +186,7 @@ export class SampleScene extends SceneController {
     }
 
     public override delete(): void {
-        this.removeAllMesh();
+        this.removeAllSceneObjects();
         this.cube?.dispose(true);
     }
 }

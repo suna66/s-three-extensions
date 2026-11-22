@@ -57,7 +57,7 @@ Updates the camera aspect ratio and projection matrix, then updates the renderer
 Initializes the renderer, selects the registered controller for `startScene`, calls its `start()` method, and installs the render loop. If no controller is registered for the key, the method returns without starting the loop. Each frame updates the timer, clamps elapsed `delta` to at most `0.1` seconds, applies any pending scene transition, calls `animate(delta)` on the active controller, then renders its `scene` with the internal camera.
 
 ### `delete(): void`
-Marks the instance as disposed, calls `delete()` on the active controller if present, and disconnects and disposes the timer. The renderer is not explicitly disposed by this method.
+Marks the instance as disposed, stops the animation loop (`setAnimationLoop(null)`), calls `delete()` and `dispose()` on all remaining registered/active controllers, clears the scene stack, disconnects and disposes the timer, and disposes the renderer.
 
 ---
 
@@ -87,7 +87,7 @@ class SampleScene extends SceneController {
             const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
             return new THREE.Mesh(geometry, material);
         });
-        this.addMesh(this.cube);
+        this.addSceneObject(this.cube);
     }
 
     public update(delta: number): void {
@@ -97,7 +97,7 @@ class SampleScene extends SceneController {
     }
 
     public override delete(): void {
-        this.removeAllMesh();
+        this.removeAllSceneObjects();
         this.cube?.dispose(true);
     }
 }

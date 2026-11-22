@@ -57,7 +57,7 @@
 レンダラーを初期化し、`startScene` に登録されたコントローラーを選択してその `start()` メソッドを呼び出し、レンダーループを開始します。キーに対応するコントローラーが登録されていない場合、ループを開始せずに終了します。各フレームではタイマーを更新し、経過時間 `delta` を最大 `0.1` 秒にクランプした上で、保留中のシーン遷移を適用し、アクティブなコントローラーの `animate(delta)` を呼び出してから、その `scene` を内部カメラで描画します。
 
 ### `delete(): void`
-インスタンスを破棄済みとしてマークし、アクティブなコントローラーが存在すればその `delete()` を呼び出し、タイマーを切断して破棄します。レンダラーはこのメソッドでは明示的に破棄されません。
+インスタンスを破棄済みとしてマークし、アニメーションループを停止（`setAnimationLoop(null)`）した上で、登録済み・アクティブな全コントローラーに対して `delete()` と `dispose()` を呼び出し、シーンスタックをクリアし、タイマーの切断・破棄およびレンダラーの破棄を行います。
 
 ---
 
@@ -87,7 +87,7 @@ class SampleScene extends SceneController {
             const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
             return new THREE.Mesh(geometry, material);
         });
-        this.addMesh(this.cube);
+        this.addSceneObject(this.cube);
     }
 
     public update(delta: number): void {
@@ -97,7 +97,7 @@ class SampleScene extends SceneController {
     }
 
     public override delete(): void {
-        this.removeAllMesh();
+        this.removeAllSceneObjects();
         this.cube?.dispose(true);
     }
 }

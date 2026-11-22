@@ -60,7 +60,7 @@
 
 * **戻り値:** `void`
 
-### `update(delta: number): void`、`getKeyState(key: string): boolean`、`flash(): void`、`dispose(): void`
+### `update(delta: number): void`、`getKeyState(key: string): boolean`、`flush(): void`、`dispose(): void`
 `AbstractControls` から継承されています。`BasicControls` を `SceneController.controller` に設定すると、`SceneController.animate()` が毎フレーム自動的に `update(delta)` を呼び出します。
 
 ---

@@ -60,7 +60,7 @@ Disables `OrbitControls` damping (`enableDamping = false`).
 
 * **Returns:** `void`
 
-### `update(delta: number): void`, `getKeyState(key: string): boolean`, `flash(): void`, `dispose(): void`
+### `update(delta: number): void`, `getKeyState(key: string): boolean`, `flush(): void`, `dispose(): void`
 Inherited from `AbstractControls`. Assigning `BasicControls` to `SceneController.controller` causes `SceneController.animate()` to call `update(delta)` automatically each frame.
 
 ---

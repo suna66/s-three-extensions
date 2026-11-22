@@ -32,7 +32,7 @@ The mode is active while the Left `Alt` key (`AltLeft`) is held or while the rig
 
 Keyboard input is ignored when the event target is an `INPUT` or `TEXTAREA` element. The fly-through movement and arrow-key rotation are processed only while fly-through mode is active. The mode is cleared on window blur.
 
-Assigning a `StudioControls` instance to `SceneController.controller` causes `SceneController.animate()` to update it automatically each frame and supplies the key state used by `SceneController.isKeyPressed()`. `StudioControls` also inherits `getKeyState()`, `flash()`, `dispose()`, `update()`, and the `mouseDownEvent` / `mouseMoveEvent` / `mouseUpEvent` callback setters from `AbstractControls`, forwarding pointer events to those callbacks before/during its own pointer handling.
+Assigning a `StudioControls` instance to `SceneController.controller` causes `SceneController.animate()` to update it automatically each frame and supplies the key state used by `SceneController.isKeyPressed()`. `StudioControls` also inherits `getKeyState()`, `flush()`, `dispose()`, `update()`, and the `mouseDownEvent` / `mouseMoveEvent` / `mouseUpEvent` callback setters from `AbstractControls`, forwarding pointer events to those callbacks before/during its own pointer handling.
 
 ---
 
@@ -92,7 +92,7 @@ Updates the controller state (inherited from `AbstractControls`). Must be called
 ---
 
 ### `dispose(): void`
-Inherited from `AbstractControls`. Removes registered event listeners and clears pointer callback references. Note that the `pointerdown` listener was registered with `{ capture: true }` but is removed without that option, so repeated construction and disposal can leave this handler attached to `dom`.
+Inherited from `AbstractControls`. Removes registered event listeners (including the `{ capture: true }` `pointerdown` listener), disposes `OrbitControls`, and clears pointer callback references.
 
 * **Parameters:** None
 * **Returns:** `void`
