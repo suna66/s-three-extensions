@@ -18,6 +18,8 @@ export class PhysicsBodyHandle {
     public readonly object: THREE.Object3D;
     public readonly rigidBody: RAPIER.RigidBody;
     private readonly world: PhysicsWorld;
+    private readonly tmpWorldPos = new THREE.Vector3();
+    private readonly tmpWorldQuat = new THREE.Quaternion();
 
     constructor(
         object: THREE.Object3D,
@@ -46,17 +48,15 @@ export class PhysicsBodyHandle {
 
     public syncFromObject(): void {
         this.object.updateWorldMatrix(true, false);
-        const worldPos = new THREE.Vector3();
-        const worldQuat = new THREE.Quaternion();
-        this.object.getWorldPosition(worldPos);
-        this.object.getWorldQuaternion(worldQuat);
+        this.object.getWorldPosition(this.tmpWorldPos);
+        this.object.getWorldQuaternion(this.tmpWorldQuat);
 
         if (this.rigidBody.isKinematic()) {
-            this.rigidBody.setNextKinematicTranslation(worldPos);
-            this.rigidBody.setNextKinematicRotation(worldQuat);
+            this.rigidBody.setNextKinematicTranslation(this.tmpWorldPos);
+            this.rigidBody.setNextKinematicRotation(this.tmpWorldQuat);
         } else {
-            this.rigidBody.setTranslation(worldPos, true);
-            this.rigidBody.setRotation(worldQuat, true);
+            this.rigidBody.setTranslation(this.tmpWorldPos, true);
+            this.rigidBody.setRotation(this.tmpWorldQuat, true);
         }
     }
 
@@ -69,12 +69,14 @@ export class PhysicsWorld {
     private world: RAPIER.World;
     private eventQueue: RAPIER.EventQueue;
     private bindings = new Map<THREE.Object3D, PhysicsBodyHandle>();
+    private dynamicBindings = new Map<THREE.Object3D, PhysicsBodyHandle>();
     private colliderMetaMap = new Map<number, ColliderMeta>();
     private listeners = new Set<(event: CollisionEventPayload) => void>();
     private isDisposed = false;
 
     private readonly tmpWorldPos = new THREE.Vector3();
     private readonly tmpWorldQuat = new THREE.Quaternion();
+    private readonly tmpWorldScale = new THREE.Vector3();
     private readonly tmpParentQuat = new THREE.Quaternion();
     private readonly tmpParentQuatInv = new THREE.Quaternion();
 
@@ -110,6 +112,7 @@ export class PhysicsWorld {
         this.isDisposed = true;
 
         this.bindings.clear();
+        this.dynamicBindings.clear();
         this.colliderMetaMap.clear();
         this.listeners.clear();
 
@@ -126,14 +129,16 @@ export class PhysicsWorld {
         }
 
         object.updateWorldMatrix(true, false);
-        const worldPos = new THREE.Vector3();
-        const worldQuat = new THREE.Quaternion();
-        object.getWorldPosition(worldPos);
-        object.getWorldQuaternion(worldQuat);
+        object.getWorldPosition(this.tmpWorldPos);
+        object.getWorldQuaternion(this.tmpWorldQuat);
 
         const desc = this.createRigidBodyDesc(options.type)
-            .setTranslation(worldPos.x, worldPos.y, worldPos.z)
-            .setRotation(worldQuat);
+            .setTranslation(
+                this.tmpWorldPos.x,
+                this.tmpWorldPos.y,
+                this.tmpWorldPos.z,
+            )
+            .setRotation(this.tmpWorldQuat);
 
         if (options.linearDamping !== undefined)
             desc.setLinearDamping(options.linearDamping);
@@ -159,6 +164,9 @@ export class PhysicsWorld {
             initialColliders,
         );
         this.bindings.set(object, handle);
+        if (options.type === "dynamic") {
+            this.dynamicBindings.set(object, handle);
+        }
         return handle;
     }
 
@@ -184,18 +192,19 @@ export class PhysicsWorld {
         const isSensor = options.isSensor ?? false;
         const applyScale = options.applyWorldScale ?? true;
 
-        const worldScale = new THREE.Vector3(1, 1, 1);
         if (applyScale) {
-            object.getWorldScale(worldScale);
+            object.getWorldScale(this.tmpWorldScale);
+        } else {
+            this.tmpWorldScale.set(1, 1, 1);
         }
 
         desc.setSensor(isSensor);
         if (options.activeEvent == true)
             desc.setActiveEvents(RAPIER.ActiveEvents.COLLISION_EVENTS);
 
-        const ox = (options.offset?.[0] ?? 0) * worldScale.x + autoOffset.x;
-        const oy = (options.offset?.[1] ?? 0) * worldScale.y + autoOffset.y;
-        const oz = (options.offset?.[2] ?? 0) * worldScale.z + autoOffset.z;
+        const ox = (options.offset?.[0] ?? 0) * this.tmpWorldScale.x + autoOffset.x;
+        const oy = (options.offset?.[1] ?? 0) * this.tmpWorldScale.y + autoOffset.y;
+        const oz = (options.offset?.[2] ?? 0) * this.tmpWorldScale.z + autoOffset.z;
         desc.setTranslation(ox, oy, oz);
 
         if (options.friction !== undefined) desc.setFriction(options.friction);
@@ -236,9 +245,7 @@ export class PhysicsWorld {
         this.world.timestep = dt;
         this.world.step(this.eventQueue);
 
-        for (const [object, handle] of this.bindings) {
-            if (!handle.rigidBody.isDynamic()) continue;
-
+        for (const [object, handle] of this.dynamicBindings) {
             const t = handle.rigidBody.translation();
             const r = handle.rigidBody.rotation();
 
@@ -288,6 +295,7 @@ export class PhysicsWorld {
         this.detachAllColliders(handle.rigidBody);
         this.world.removeRigidBody(handle.rigidBody);
         this.bindings.delete(object);
+        this.dynamicBindings.delete(object);
     }
 
     private detachAllColliders(rigidBody: RAPIER.RigidBody): void {
@@ -313,8 +321,10 @@ export class PhysicsWorld {
         }
     }
 
-    private extractScaledLocalVertices(root: THREE.Object3D): Float32Array {
-        const positions: number[] = [];
+    private forEachScaledLocalVertex(
+        root: THREE.Object3D,
+        callback: (vertex: THREE.Vector3) => void,
+    ): void {
         root.updateWorldMatrix(true, true);
 
         const rootWorldPos = new THREE.Vector3();
@@ -343,10 +353,16 @@ export class PhysicsWorld {
 
             for (let i = 0; i < posAttr.count; i++) {
                 v.fromBufferAttribute(posAttr, i).applyMatrix4(toScaledLocal);
-                positions.push(v.x, v.y, v.z);
+                callback(v);
             }
         });
+    }
 
+    private extractScaledLocalVertices(root: THREE.Object3D): Float32Array {
+        const positions: number[] = [];
+        this.forEachScaledLocalVertex(root, (v) => {
+            positions.push(v.x, v.y, v.z);
+        });
         return new Float32Array(positions);
     }
 
@@ -390,13 +406,10 @@ export class PhysicsWorld {
 
         switch (spec.type) {
             case "autoBox": {
-                const vertices = this.extractScaledLocalVertices(object);
                 const box = new THREE.Box3();
-                const v = new THREE.Vector3();
-                for (let i = 0; i < vertices.length; i += 3) {
-                    v.set(vertices[i], vertices[i + 1], vertices[i + 2]);
+                this.forEachScaledLocalVertex(object, (v) => {
                     box.expandByPoint(v);
-                }
+                });
 
                 const size = new THREE.Vector3();
                 box.getSize(size);
@@ -412,24 +425,20 @@ export class PhysicsWorld {
                 };
             }
             case "autoSphere": {
-                const vertices = this.extractScaledLocalVertices(object);
                 const box = new THREE.Box3();
-                const v = new THREE.Vector3();
-                for (let i = 0; i < vertices.length; i += 3) {
-                    v.set(vertices[i], vertices[i + 1], vertices[i + 2]);
+                this.forEachScaledLocalVertex(object, (v) => {
                     box.expandByPoint(v);
-                }
+                });
 
                 box.getCenter(autoOffset);
 
                 let maxRadiusSq = 0;
-                for (let i = 0; i < vertices.length; i += 3) {
-                    v.set(vertices[i], vertices[i + 1], vertices[i + 2]);
+                this.forEachScaledLocalVertex(object, (v) => {
                     maxRadiusSq = Math.max(
                         maxRadiusSq,
                         autoOffset.distanceToSquared(v),
                     );
-                }
+                });
 
                 return {
                     desc: RAPIER.ColliderDesc.ball(Math.sqrt(maxRadiusSq)),

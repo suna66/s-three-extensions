@@ -21,6 +21,8 @@ export default abstract class AbstractControls {
     protected _forward = new THREE.Vector3();
     protected _right = new THREE.Vector3();
     protected _euler = new THREE.Euler(0, 0, 0, "YXZ");
+    private _prevPosition = new THREE.Vector3();
+    private _deltaMove = new THREE.Vector3();
     protected _cameraSpeed: number = 5;
     protected _rotateSpeed: number = 1.5;
 
@@ -145,7 +147,7 @@ export default abstract class AbstractControls {
         direction: "UP" | "RIGHT" | "FORWARD",
         moveSpeed: number,
     ) {
-        const prevPosition = this._camera.position.clone();
+        this._prevPosition.copy(this._camera.position);
 
         this._camera.getWorldDirection(this._forward);
         this._right.crossVectors(this._forward, this._camera.up).normalize();
@@ -156,8 +158,8 @@ export default abstract class AbstractControls {
             this._camera.position.addScaledVector(this._right, moveSpeed);
         if (direction == "UP") this._camera.translateY(moveSpeed);
 
-        const deltaMove = this._camera.position.clone().sub(prevPosition);
-        this._controls.target.add(deltaMove);
+        this._deltaMove.subVectors(this._camera.position, this._prevPosition);
+        this._controls.target.add(this._deltaMove);
     }
 
     protected cameraRotate(yawDelta: number, pitchDelta: number) {

@@ -156,17 +156,42 @@ export abstract class SceneController {
         if (this._isDebug && this._physicsWorld) {
             const { vertices, colors } = this._physicsWorld.debugRenderer;
             if (this._debugMesh != null) {
-                this._debugMesh.geometry.setAttribute(
+                this.updateDebugAttribute(
+                    this._debugMesh.geometry,
                     "position",
-                    new THREE.BufferAttribute(vertices, 3),
+                    vertices,
+                    3,
                 );
-                this._debugMesh.geometry.setAttribute(
+                this.updateDebugAttribute(
+                    this._debugMesh.geometry,
                     "color",
-                    new THREE.BufferAttribute(colors, 4),
+                    colors,
+                    4,
                 );
             }
         }
         this.update(delta);
+    }
+
+    private updateDebugAttribute(
+        geometry: THREE.BufferGeometry,
+        name: string,
+        data: Float32Array,
+        itemSize: number,
+    ) {
+        const attr = geometry.getAttribute(name);
+        if (
+            attr instanceof THREE.BufferAttribute &&
+            attr.array.length === data.length
+        ) {
+            (attr.array as Float32Array).set(data);
+            attr.needsUpdate = true;
+        } else {
+            geometry.setAttribute(
+                name,
+                new THREE.BufferAttribute(data, itemSize),
+            );
+        }
     }
 
     /** @internal */
@@ -252,14 +277,17 @@ export abstract class SceneController {
     }
 
     protected removeLight(light: THREE.Light) {
-        const updateLight = this._lights.filter((value) => value !== light);
-        this._lights = updateLight;
+        const idx = this._lights.indexOf(light);
+        if (idx !== -1) {
+            this._lights.splice(idx, 1);
+        }
         this._scene.remove(light);
     }
 
     protected removeAllLight() {
         for (const light of this._lights) {
-            this.removeLight(light);
+            this._scene.remove(light);
         }
+        this._lights.length = 0;
     }
 }
