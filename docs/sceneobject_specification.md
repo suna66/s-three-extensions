@@ -19,6 +19,7 @@ Creates a `SceneObject` with an optional mesh. If a factory function is provided
 
 | Property Name | Type | Access | Description |
 | :--- | :--- | :--- | :--- |
+| `meshName` | `string \| null` | Read/Write | Gets or sets `mesh.name` when a mesh is attached (`null` if no mesh is set; setter accepts `string` and does nothing when `mesh` is `null`). |
 | `tag` | `string \| null` | Read/Write | An optional string tag identifying this object (`null` by default; setter accepts `string`). |
 | `mesh` | `THREE.Mesh \| null` | Read-only | The managed mesh, or `null` if none is set or after disposal. |
 | `physicsBodyHandle` | `PhysicsBodyHandle \| null` | Read-only | The managed physics body handle, or `null` if none is set or after disposal. |

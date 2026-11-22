@@ -1,10 +1,10 @@
 # `ExtensionUtils` モジュール インターフェース仕様
 
 ## 1. 概要
-`ExtensionUtils` は、要素のリサイズ監視や Three.js の `Mesh`・`Light` リソースの安全な破棄を行うためのスタンドアロンユーティリティ関数群を提供します。
+`ExtensionUtils` は、要素のリサイズ監視や Three.js の `Object3D`・`Mesh`・`Light` リソースの安全な破棄を行うためのスタンドアロンユーティリティ関数群を提供します。
 
 * **依存関係:** `three`
-* **エクスポート形式:** `src/s-three-extensions/ExtensionUtils.ts` から `addResizeCallback`、`removeResizeCallback`、`disposeMesh`、`disposeLight` を名前付きエクスポート（`src/s-three-extensions/index.ts` から再エクスポート）。
+* **エクスポート形式:** `src/s-three-extensions/ExtensionUtils.ts` から `addResizeCallback`、`removeResizeCallback`、`disposeObject3D`、`disposeMesh`、`disposeLight` を名前付きエクスポート（`addResizeCallback`、`removeResizeCallback`、`disposeMesh`、`disposeLight` は `src/s-three-extensions/index.ts` から再エクスポート）。
 
 ---
 
@@ -25,6 +25,21 @@
 
 * **パラメーター:**
   * `resizeObserver` (`ResizeObserver`): `addResizeCallback()` で返されたオブザーバー。
+* **戻り値:** `void`
+
+---
+
+### `disposeObject3D(root: THREE.Object3D | null, disposeResources: boolean = false): void`
+Three.js の `Object3D` 階層（`Mesh`、`InstancedMesh`、GLB の `gltf.scene`、FBX の `Group` など）を親から切り離して再帰的に破棄します。`root` が `null` の場合は何もしません。
+1. `root.removeFromParent()` を呼び出します。
+2. `root` とすべての子孫を走査（`traverse`）し、以下を実行します：
+   * `dispose()` メソッドを持つオブジェクトであれば `object.dispose()` を呼び出します。
+   * `THREE.SkinnedMesh` の場合は `object.skeleton?.dispose()` を呼び出します。
+   * `disposeResources` が `true` かつ `THREE.Mesh` の場合、`object.geometry` を破棄し、マテリアル（配列の場合は各要素）のプロパティに含まれるすべての `THREE.Texture` を破棄した上でマテリアル自体を破棄します。
+
+* **パラメーター:**
+  * `root` (`THREE.Object3D | null`): 破棄対象のルートオブジェクト。
+  * `disposeResources` (`boolean`、省略可、既定値 `false`): ジオメトリ、テクスチャ、マテリアルも破棄するかどうか。
 * **戻り値:** `void`
 
 ---

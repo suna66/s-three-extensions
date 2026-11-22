@@ -70,8 +70,14 @@ Rapierのタイムステップを `dt` に設定してシミュレーション�
 ### `addCollider(options: ColliderOptions): RAPIER.Collider`
 剛体にコライダーを追加し、後で再構築できるよう設定を保持します。
 
+### `replaceColliders(colliders: ColliderOptions[]): void`
+`PhysicsWorld.replaceColliders()` を通じて剛体のコライダーを `colliders` で置き換え、保持しているコライダー設定を `colliders` のシャローコピーで更新します。
+
 ### `rebuildColliders(): void`
 このハンドルが保持している設定を使って、剛体のコライダーを置き換えます。
+
+### `copyColliders(): ColliderOptions[]`
+このハンドルが保持しているコライダー設定のシャローコピーを返します。
 
 ### `syncFromObject(): void`
 オブジェクトの現在のワールド座標上の位置と回転を剛体へコピーします。キネマティック剛体の場合は次のキネマティック位置と回転を設定し、それ以外の剛体では位置と回転を直接設定します。

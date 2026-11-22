@@ -1,10 +1,10 @@
 # `ExtensionUtils` Module Interface Specification
 
 ## 1. Overview
-`ExtensionUtils` provides standalone utility functions for observing element resizing and safely disposing Three.js `Mesh` and `Light` resources.
+`ExtensionUtils` provides standalone utility functions for observing element resizing and safely disposing Three.js `Object3D`, `Mesh`, and `Light` resources.
 
 * **Dependencies:** `three`
-* **Export Format:** Named exports `addResizeCallback`, `removeResizeCallback`, `disposeMesh`, and `disposeLight` from `src/s-three-extensions/ExtensionUtils.ts`, re-exported from `src/s-three-extensions/index.ts`
+* **Export Format:** Named exports `addResizeCallback`, `removeResizeCallback`, `disposeObject3D`, `disposeMesh`, and `disposeLight` from `src/s-three-extensions/ExtensionUtils.ts` (`addResizeCallback`, `removeResizeCallback`, `disposeMesh`, and `disposeLight` are re-exported from `src/s-three-extensions/index.ts`).
 
 ---
 
@@ -25,6 +25,21 @@ Disconnects the given `ResizeObserver`.
 
 * **Parameters:**
   * `resizeObserver` (`ResizeObserver`): The observer returned by `addResizeCallback()`.
+* **Returns:** `void`
+
+---
+
+### `disposeObject3D(root: THREE.Object3D | null, disposeResources: boolean = false): void`
+Recursively detaches and disposes a Three.js `Object3D` hierarchy (such as a `Mesh`, `InstancedMesh`, GLB `gltf.scene`, or FBX `Group`). Does nothing if `root` is `null`.
+1. Calls `root.removeFromParent()`.
+2. Traverses `root` and all descendants:
+   * If an object defines a `dispose()` method, calls `object.dispose()`.
+   * If an object is a `THREE.SkinnedMesh`, calls `object.skeleton?.dispose()`.
+   * When `disposeResources` is `true` and an object is a `THREE.Mesh`, disposes `object.geometry`, disposes any `THREE.Texture` values found on its material(s), and disposes each material.
+
+* **Parameters:**
+  * `root` (`THREE.Object3D | null`): The root object to dispose.
+  * `disposeResources` (`boolean`, optional, default: `false`): Whether to also dispose geometries, textures, and materials.
 * **Returns:** `void`
 
 ---

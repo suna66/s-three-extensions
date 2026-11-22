@@ -21,12 +21,14 @@ Utilities for building Three.js scenes with a WebGPU renderer, DCC-style viewpor
   - Wraps Rapier physics with Three.js object bindings, rigid bodies, colliders, sensors, debug renderer data, and collision events.
   - Steps the simulation and synchronizes dynamic body transforms back to their Three.js objects.
 - **`SceneObject`**:
-  - Groups a Three.js `Mesh` with an optional `PhysicsBodyHandle`, an optional `tag`, and an optional per-frame update callback (`addUpdateFunction()`).
+  - Groups a Three.js `Mesh` with an optional `PhysicsBodyHandle`, `meshName`, an optional `tag`, and an optional per-frame update callback (`addUpdateFunction()`).
   - Provides unified mesh and material/geometry disposal via `disposeMesh()`.
 - **`Raycast`**:
   - Wraps `THREE.Raycaster` to convert client pointer coordinates relative to a DOM element and test intersections against Three.js objects.
 - **`ExtensionUtils`**:
-  - Provides `addResizeCallback()`, `removeResizeCallback()`, `disposeMesh()`, and `disposeLight()` utilities.
+  - Provides `addResizeCallback()`, `removeResizeCallback()`, `disposeObject3D()`, `disposeMesh()`, and `disposeLight()` utilities.
+- **Loaders (`FBXManager`, `GLBManager`, `TextureManager`)**:
+  - Singleton wrappers around `FBXLoader`, `GLTFLoader`, and `THREE.TextureLoader` supporting both `loadAsync()` and callback-based `load()`.
 
 ## Requirements
 
@@ -46,6 +48,12 @@ The source barrel at `src/s-three-extensions/index.ts` exports:
 - Classes: `ThreeWorld`, `SceneController`, `SceneObject`, `AbstractControls`, `StudioControls`, `BasicControls`, `PhysicsWorld`, `PhysicsBodyHandle`, `Raycast`
 - Utilities: `addResizeCallback`, `removeResizeCallback`, `disposeMesh`, `disposeLight`
 - Types: `ColliderMeta`, `BodyType`, `ColliderShapeSpec`, `ColliderOptions`, `RigidBodyOptions`, `CollisionEventPayload`
+
+Additional modules available via direct source imports:
+- `src/s-three-extensions/ExtensionUtils.ts`: `disposeObject3D`
+- `src/s-three-extensions/loaders/FBXManager.ts`: `FBXManager`
+- `src/s-three-extensions/loaders/GLBManager.ts`: `GLBManager`
+- `src/s-three-extensions/loaders/TextureManager.ts`: `TextureManager`
 
 ## Quick Start
 
@@ -183,6 +191,9 @@ See the detailed interface specifications:
 - [PhysicsWorld](./docs/physicsworld_specification.md) | [日本語](./docs/ja/physicsworld_specification.md)
 - [Raycast](./docs/raycast_specification.md) | [日本語](./docs/ja/raycast_specification.md)
 - [ExtensionUtils](./docs/extensionutils_specification.md) | [日本語](./docs/ja/extensionutils_specification.md)
+- [FBXManager](./docs/fbxmanager_specification.md) | [日本語](./docs/ja/fbxmanager_specification.md)
+- [GLBManager](./docs/glbmanager_specification.md) | [日本語](./docs/ja/glbmanager_specification.md)
+- [TextureManager](./docs/texturemanager_specification.md) | [日本語](./docs/ja/texturemanager_specification.md)
 
 ## License
 

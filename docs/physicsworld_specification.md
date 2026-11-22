@@ -70,8 +70,14 @@ Returned by `addBody()` and `addSensor()`. It provides access to the bound objec
 ### `addCollider(options: ColliderOptions): RAPIER.Collider`
 Adds a collider to the body and retains its options for later rebuilding.
 
+### `replaceColliders(colliders: ColliderOptions[]): void`
+Replaces the body's colliders with `colliders` via `PhysicsWorld.replaceColliders()` and updates the retained collider specs to a shallow copy of `colliders`.
+
 ### `rebuildColliders(): void`
 Replaces the body's colliders using the options retained by this handle.
+
+### `copyColliders(): ColliderOptions[]`
+Returns a shallow copy of the collider options retained by this handle.
 
 ### `syncFromObject(): void`
 Copies the object's current world position and rotation to the rigid body. For kinematic bodies, sets the next kinematic translation and rotation; for other body types, directly sets translation and rotation.

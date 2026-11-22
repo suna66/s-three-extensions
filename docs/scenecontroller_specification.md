@@ -131,6 +131,11 @@ Registers the `SceneObject` in `_sceneObjects` and, if `sceneObject.mesh` is non
 
 ---
 
+### `protected getSceneObject(mesh: THREE.Mesh): SceneObject | null`
+Searches `_sceneObjects` for the `SceneObject` whose `mesh` matches the given `mesh`, and returns it (or `null` if not found or `_sceneObjects` is `null`).
+
+---
+
 ### `protected removeSceneObject(sceneObject: SceneObject): void`
 Removes `sceneObject.mesh` from `this.scene` (if non-null) and removes `sceneObject` from `_sceneObjects`. It does not dispose the mesh geometry, material, or textures; call `sceneObject.dispose(...)` separately when needed.
 

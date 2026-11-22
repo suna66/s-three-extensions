@@ -131,6 +131,11 @@
 
 ---
 
+### `protected getSceneObject(mesh: THREE.Mesh): SceneObject | null`
+指定された `mesh` と一致する `mesh` を持つ `SceneObject` を `_sceneObjects` から検索して返します（見つからない場合や `_sceneObjects` が `null` の場合は `null`）。
+
+---
+
 ### `protected removeSceneObject(sceneObject: SceneObject): void`
 `sceneObject.mesh` を `this.scene` から削除し（`null` でない場合）、`sceneObject` を `_sceneObjects` から取り除きます。ジオメトリ、マテリアル、テクスチャの破棄は行わないため、必要に応じて `sceneObject.dispose(...)` を別途呼び出してください。
 
