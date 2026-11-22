@@ -20,6 +20,53 @@ export function removeResizeCallback(resizeObserver: ResizeObserver) {
     resizeObserver.disconnect();
 }
 
+/**
+ * Dispose Object3D.
+ *
+ * - delete Mesh / InstancedMesh : disposeObject3D(mesh, true)
+ * - delete GLB : disposeObject3D(gltf.scene, true)
+ * - delete FBX : disposeObject3D(fbxGroup, true)
+ * @param root mesh
+ * @param disposeResources true: delete all resources/ false: don't delete resources.
+ * @returns void
+ */
+export function disposeObject3D(
+    root: THREE.Object3D | null,
+    disposeResources: boolean = false,
+): void {
+    if (root === null) return;
+
+    root.removeFromParent();
+
+    root.traverse((object) => {
+        if ("dispose" in object && typeof object.dispose === "function") {
+            object.dispose();
+        }
+        if (object instanceof THREE.SkinnedMesh) {
+            object.skeleton?.dispose();
+        }
+
+        if (disposeResources && object instanceof THREE.Mesh) {
+            object.geometry?.dispose();
+
+            const materials = Array.isArray(object.material)
+                ? object.material
+                : [object.material];
+
+            for (const material of materials) {
+                if (!material) continue;
+
+                for (const value of Object.values(material)) {
+                    if (value instanceof THREE.Texture) {
+                        value.dispose();
+                    }
+                }
+                material.dispose();
+            }
+        }
+    });
+}
+
 export function disposeMesh(
     mesh: THREE.Mesh | null,
     disposeGeometryAndMaterial: boolean = false,
