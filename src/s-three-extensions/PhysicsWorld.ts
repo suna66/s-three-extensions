@@ -38,12 +38,21 @@ export class PhysicsBodyHandle {
         return this.world.attachCollider(this.object, this.rigidBody, options);
     }
 
+    public replaceColliders(colliders: ColliderOptions[]): void {
+        this.world.replaceColliders(this.object, this.rigidBody, colliders);
+        this.colliderSpecs = [...colliders];
+    }
+
     public rebuildColliders(): void {
         this.world.replaceColliders(
             this.object,
             this.rigidBody,
             this.colliderSpecs,
         );
+    }
+
+    public copyColliders(): ColliderOptions[] {
+        return [...this.colliderSpecs];
     }
 
     public syncFromObject(): void {
@@ -202,9 +211,12 @@ export class PhysicsWorld {
         if (options.activeEvent == true)
             desc.setActiveEvents(RAPIER.ActiveEvents.COLLISION_EVENTS);
 
-        const ox = (options.offset?.[0] ?? 0) * this.tmpWorldScale.x + autoOffset.x;
-        const oy = (options.offset?.[1] ?? 0) * this.tmpWorldScale.y + autoOffset.y;
-        const oz = (options.offset?.[2] ?? 0) * this.tmpWorldScale.z + autoOffset.z;
+        const ox =
+            (options.offset?.[0] ?? 0) * this.tmpWorldScale.x + autoOffset.x;
+        const oy =
+            (options.offset?.[1] ?? 0) * this.tmpWorldScale.y + autoOffset.y;
+        const oz =
+            (options.offset?.[2] ?? 0) * this.tmpWorldScale.z + autoOffset.z;
         desc.setTranslation(ox, oy, oz);
 
         if (options.friction !== undefined) desc.setFriction(options.friction);

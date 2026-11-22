@@ -22,6 +22,15 @@ export default class SceneObject {
         }
     }
 
+    public set meshName(name: string) {
+        if (this._mesh) this._mesh.name = name;
+    }
+
+    public get meshName(): string | null {
+        if (this._mesh) return this._mesh.name;
+        return null;
+    }
+
     public set tag(value: string) {
         this._tag = value;
     }

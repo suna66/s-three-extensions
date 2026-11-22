@@ -253,6 +253,14 @@ export abstract class SceneController {
         }
     }
 
+    protected getSceneObject(mesh: THREE.Mesh): SceneObject | null {
+        if (this._sceneObjects == null) return null;
+        for (const obj of this._sceneObjects) {
+            if (obj.mesh == mesh) return obj;
+        }
+        return null;
+    }
+
     protected removeSceneObject(sceneObject: SceneObject) {
         if (sceneObject.mesh) {
             this._scene.remove(sceneObject.mesh);

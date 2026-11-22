@@ -58,7 +58,7 @@ class SubScene extends SceneController {
 
         this._box = new SceneObject(() => {
             const geometry = new THREE.BoxGeometry(1, 1, 1);
-            const material = new THREE.MeshNormalMaterial();
+            const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
             const cube = new THREE.Mesh(geometry, material);
             cube.position.set(0, 10, 0);
             return cube;
@@ -129,6 +129,9 @@ class SubScene extends SceneController {
             );
             if (intersects.length > 0) {
                 console.log("hit!");
+                const obj = intersects[0].object as THREE.Mesh;
+                // (obj.material as THREE.MeshBasicMaterial).color.set(0xff0000);
+                console.log(this.getSceneObject(obj));
             }
         };
     }
