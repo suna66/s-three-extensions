@@ -6,6 +6,8 @@ import {
     SceneObject,
     disposeLight,
     BasicControls,
+    type CollisionEventPayload,
+    Raycast,
 } from "../../src/s-three-extensions";
 import * as THREE from "three";
 
@@ -13,7 +15,7 @@ class MainScene extends SceneController {
     private _cube: SceneObject | null = null;
 
     public start() {
-        this.setController(new StudioControls(this.camera, this.domElement));
+        this.controller = new StudioControls(this.camera, this.domElement);
         this._cube = new SceneObject(() => {
             const geometry = new THREE.BoxGeometry();
             const material = new THREE.MeshNormalMaterial();
@@ -43,7 +45,7 @@ class SubScene extends SceneController {
 
     public async start() {
         await this.initPhysics();
-        this.setController(new StudioControls(this.camera, this.domElement));
+        this.controller = new StudioControls(this.camera, this.domElement);
         this.physicsDebug = true;
 
         this._sphere = new SceneObject(() => {
@@ -100,9 +102,41 @@ class SubScene extends SceneController {
         this._box.setPhysicalBody((mesh) =>
             this._physicsWorld!.addBody(mesh, {
                 type: "dynamic",
-                colliders: [{ shape: { type: "autoBox" }, restitution: 0.5 }],
+                colliders: [
+                    {
+                        shape: { type: "autoBox" },
+                        restitution: 0.5,
+                        activeEvent: true,
+                    },
+                ],
             }),
         );
+
+        this.collision = (event: CollisionEventPayload) => {
+            console.log(event);
+        };
+        this.enablePhysicsActiveEvent = true;
+
+        // const colliderId = this.physicsWorld?.onCollision(
+        //     (event: CollisionEventPayload) => {
+        //         console.log(event);
+        //     },
+        // );
+
+        const ray = new Raycast(this.domElement, this.camera);
+        const objects: Array<THREE.Object3D> = [];
+        objects.push(this._box.mesh!);
+        this.controller.mouseMoveEvent = (event: PointerEvent) => {
+            const intersects = ray.mousePoint(
+                event.clientX,
+                event.clientY,
+                objects,
+                false,
+            );
+            if (intersects.length > 0) {
+                console.log("hit!");
+            }
+        };
     }
 
     public update(_delta: number) {
@@ -150,7 +184,7 @@ class BatchScene extends SceneController {
     }
 
     public async start() {
-        this.setController(new BasicControls(this.camera, this.domElement));
+        this.controller = new BasicControls(this.camera, this.domElement);
         const cone = new THREE.ConeGeometry(1.0, 2.0);
         const box = new THREE.BoxGeometry(2.0, 2.0, 2.0);
         const sphere = new THREE.SphereGeometry(1.0, 16, 8);

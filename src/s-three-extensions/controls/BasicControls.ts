@@ -6,26 +6,10 @@ export default class BasicControls extends AbstractControls {
     protected _rotateSpeed: number = 1.5;
     protected _mouseSensitivity: number = 0.003;
 
-    private _mouseDownEvent: ((e: PointerEvent) => void) | null = null;
-    private _mouseMoveEvent: ((e: PointerEvent) => void) | null = null;
-    private _mouseUpEvent: ((e: PointerEvent) => void) | null = null;
-
     constructor(camera: THREE.Camera, dom: HTMLCanvasElement) {
         super(camera, dom);
 
         this.setupEvents();
-    }
-
-    public set mouseDownEvent(func: (e: PointerEvent) => void) {
-        this._mouseDownEvent = func;
-    }
-
-    public set mouseMoveEvent(func: (e: PointerEvent) => void) {
-        this._mouseMoveEvent = func;
-    }
-
-    public set mouseUpEvent(func: (e: PointerEvent) => void) {
-        this._mouseUpEvent = func;
     }
 
     protected defaultMode(): MouseButtons {
@@ -35,18 +19,6 @@ export default class BasicControls extends AbstractControls {
             RIGHT: null,
         };
     }
-
-    protected handleMouseDown = (e: PointerEvent) => {
-        if (this._mouseDownEvent) this.mouseDownEvent(e);
-    };
-
-    protected handleMouseMove = (e: PointerEvent) => {
-        if (this._mouseMoveEvent) this._mouseMoveEvent(e);
-    };
-
-    protected handleMouseUp = (e: PointerEvent) => {
-        if (this._mouseUpEvent) this._mouseUpEvent(e);
-    };
 
     protected cameraMove(
         direction: "UP" | "RIGHT" | "FORWARD",

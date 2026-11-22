@@ -30,7 +30,8 @@ export default class StudioControls extends AbstractControls {
         };
     }
 
-    protected handleMouseDown = (e: PointerEvent) => {
+    protected override handleMouseDown = (e: PointerEvent) => {
+        if (this._mouseDownEvent) this._mouseDownEvent(e);
         const btn = e.button;
         if (btn == 2) {
             this._isRightDragging = true;
@@ -38,7 +39,8 @@ export default class StudioControls extends AbstractControls {
         }
     };
 
-    protected handleMouseMove = (e: PointerEvent) => {
+    protected override handleMouseMove = (e: PointerEvent) => {
+        if (this._mouseMoveEvent) this._mouseMoveEvent(e);
         if (!this._isRightDragging) return;
 
         const yawDelta = -e.movementX * this._mouseSensitivity;
@@ -48,6 +50,7 @@ export default class StudioControls extends AbstractControls {
     };
 
     protected handleMouseUp = (e: PointerEvent) => {
+        if (this._mouseUpEvent) this._mouseUpEvent(e);
         const btn = e.button;
         if (btn == 2) {
             this._isRightDragging = false;

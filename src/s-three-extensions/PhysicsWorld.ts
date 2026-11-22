@@ -7,6 +7,7 @@ import type {
 } from "./types/PhysicsTypes";
 
 export interface ColliderMeta {
+    collider: RAPIER.Collider;
     object: THREE.Object3D;
     tag?: string;
     isSensor: boolean;
@@ -87,6 +88,10 @@ export class PhysicsWorld {
     ): Promise<PhysicsWorld> {
         await RAPIER.init();
         return new PhysicsWorld(gravity);
+    }
+
+    public getPhysicBodyHandler(obj: THREE.Object3D): PhysicsBodyHandle | null {
+        return this.bindings.get(obj) ?? null;
     }
 
     public get disposed(): boolean {
@@ -185,7 +190,8 @@ export class PhysicsWorld {
         }
 
         desc.setSensor(isSensor);
-        desc.setActiveEvents(RAPIER.ActiveEvents.COLLISION_EVENTS);
+        if (options.activeEvent == true)
+            desc.setActiveEvents(RAPIER.ActiveEvents.COLLISION_EVENTS);
 
         const ox = (options.offset?.[0] ?? 0) * worldScale.x + autoOffset.x;
         const oy = (options.offset?.[1] ?? 0) * worldScale.y + autoOffset.y;
@@ -199,6 +205,7 @@ export class PhysicsWorld {
 
         const collider = this.world.createCollider(desc, rigidBody);
         this.colliderMetaMap.set(collider.handle, {
+            collider,
             object,
             tag: options.tag,
             isSensor,
@@ -262,8 +269,10 @@ export class PhysicsWorld {
 
             for (const listener of this.listeners) {
                 listener({
+                    selfCollider: meta1.collider,
                     selfObject: meta1.object,
                     selfTag: meta1.tag,
+                    otherCollider: meta2.collider,
                     otherObject: meta2.object,
                     otherTag: meta2.tag,
                     started,

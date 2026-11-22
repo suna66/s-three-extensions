@@ -3,6 +3,7 @@ import ThreeWorld from "./ThreeWorld";
 import SceneObject from "./SceneObject";
 import { PhysicsWorld } from "./PhysicsWorld";
 import type AbstractControls from "./controls/AbstractControls";
+import type { CollisionEventPayload } from "./types/PhysicsTypes";
 
 export abstract class SceneController {
     protected _scene: THREE.Scene;
@@ -14,6 +15,8 @@ export abstract class SceneController {
     private _suspended: boolean = false;
     private _isDebug: boolean = false;
     private _debugMesh: THREE.LineSegments | null = null;
+    private _enablePhysicsActiveEvent: boolean = false;
+    private _physicsEventDispose: (() => void) | null = null;
 
     constructor() {
         this._scene = new THREE.Scene();
@@ -83,15 +86,38 @@ export abstract class SceneController {
         return this._physicsWorld;
     }
 
+    public set enablePhysicsActiveEvent(sw: boolean) {
+        if (sw) {
+            if (!this._enablePhysicsActiveEvent) {
+                if (this._physicsWorld) {
+                    this._physicsEventDispose = this._physicsWorld.onCollision(
+                        this.physicsActiveEvent,
+                    );
+                }
+            }
+        } else {
+            if (this._enablePhysicsActiveEvent) {
+                if (this._physicsEventDispose) this._physicsEventDispose();
+            }
+        }
+        this._enablePhysicsActiveEvent = sw;
+    }
+
+    public set controller(ctrl: AbstractControls | null) {
+        this._controller = ctrl;
+    }
+
     public abstract start(): void;
     public abstract update(delta: number): void;
     public stop() {}
     public restart() {}
     public delete() {}
+    public collision(_event: CollisionEventPayload) {}
 
-    public setController(controller: AbstractControls) {
-        this._controller = controller;
-    }
+    protected physicsActiveEvent = (event: CollisionEventPayload) => {
+        if (this._physicsWorld == null) return;
+        this.collision(event);
+    };
 
     public animate(delta: number) {
         if (this._physicsWorld) {
@@ -146,6 +172,10 @@ export abstract class SceneController {
         }
         if (this._controller) {
             this._controller.dispose();
+        }
+        if (this._physicsEventDispose) {
+            this._physicsEventDispose();
+            this._physicsEventDispose = null;
         }
         this.physicsDebug = false;
     }

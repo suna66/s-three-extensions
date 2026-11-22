@@ -13,6 +13,10 @@ export default abstract class AbstractControls {
     protected _controls: OrbitControls;
     protected _pressKeys: Set<string>;
 
+    protected _mouseDownEvent: ((e: PointerEvent) => void) | null = null;
+    protected _mouseMoveEvent: ((e: PointerEvent) => void) | null = null;
+    protected _mouseUpEvent: ((e: PointerEvent) => void) | null = null;
+
     protected _direction = new THREE.Vector3();
     protected _forward = new THREE.Vector3();
     protected _right = new THREE.Vector3();
@@ -40,6 +44,18 @@ export default abstract class AbstractControls {
         this._controls.mouseButtons = buttons;
     }
 
+    public set mouseDownEvent(func: (e: PointerEvent) => void) {
+        this._mouseDownEvent = func;
+    }
+
+    public set mouseMoveEvent(func: (e: PointerEvent) => void) {
+        this._mouseMoveEvent = func;
+    }
+
+    public set mouseUpEvent(func: (e: PointerEvent) => void) {
+        this._mouseUpEvent = func;
+    }
+
     protected setupControlOptions() {
         this._controls.mouseButtons = this.defaultMode();
         this._camera.getWorldDirection(this._direction);
@@ -49,11 +65,17 @@ export default abstract class AbstractControls {
 
     protected abstract keyEvent(delta: number): void;
 
-    protected abstract handleMouseDown: (e: PointerEvent) => void;
+    protected handleMouseDown = (e: PointerEvent) => {
+        if (this._mouseDownEvent) this._mouseDownEvent(e);
+    };
 
-    protected abstract handleMouseMove: (e: PointerEvent) => void;
+    protected handleMouseMove = (e: PointerEvent) => {
+        if (this._mouseMoveEvent) this._mouseMoveEvent(e);
+    };
 
-    protected abstract handleMouseUp: (e: PointerEvent) => void;
+    protected handleMouseUp = (e: PointerEvent) => {
+        if (this._mouseUpEvent) this._mouseUpEvent(e);
+    };
 
     protected handleKeyDown = (e: KeyboardEvent) => {
         if (e.target instanceof HTMLElement) {
@@ -111,6 +133,9 @@ export default abstract class AbstractControls {
         removeEventListener("keydown", this.handleKeyDown);
         removeEventListener("keyup", this.handleKeyUp);
         removeEventListener("blur", this.handleBlur);
+        this._mouseDownEvent = null;
+        this._mouseMoveEvent = null;
+        this._mouseUpEvent = null;
     }
 
     public update(delta: number) {

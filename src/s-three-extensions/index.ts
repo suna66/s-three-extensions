@@ -3,6 +3,7 @@ import StudioControls from "./controls/StudioControls";
 import BasicControls from "./controls/BasicControls";
 import ThreeWorld from "./ThreeWorld";
 import { SceneController } from "./SceneController";
+import Raycast from "./Raycast";
 import {
     PhysicsBodyHandle,
     PhysicsWorld,
@@ -32,6 +33,7 @@ export {
     PhysicsBodyHandle,
     PhysicsWorld,
     SceneObject,
+    Raycast,
     addResizeCallback,
     removeResizeCallback,
     disposeMesh,

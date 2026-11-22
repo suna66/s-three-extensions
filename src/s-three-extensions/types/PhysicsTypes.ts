@@ -1,3 +1,4 @@
+import type RAPIER from "@dimforge/rapier3d-compat";
 import * as THREE from "three";
 
 export type BodyType =
@@ -18,6 +19,7 @@ export type ColliderShapeSpec =
 export interface ColliderOptions {
     shape: ColliderShapeSpec;
     isSensor?: boolean;
+    activeEvent?: boolean;
     offset?: [number, number, number];
     applyWorldScale?: boolean;
     tag?: string;
@@ -35,8 +37,10 @@ export interface RigidBodyOptions {
 }
 
 export interface CollisionEventPayload {
+    selfCollider: RAPIER.Collider;
     selfObject: THREE.Object3D;
     selfTag?: string;
+    otherCollider: RAPIER.Collider;
     otherObject: THREE.Object3D;
     otherTag?: string;
     started: boolean;
