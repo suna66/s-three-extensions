@@ -117,12 +117,6 @@ class SubScene extends SceneController {
         };
         this.enablePhysicsActiveEvent = true;
 
-        // const colliderId = this.physicsWorld?.onCollision(
-        //     (event: CollisionEventPayload) => {
-        //         console.log(event);
-        //     },
-        // );
-
         const ray = new Raycast(this.domElement, this.camera);
         const objects: Array<THREE.Object3D> = [];
         objects.push(this._box.mesh!);

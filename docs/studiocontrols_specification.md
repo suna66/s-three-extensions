@@ -4,7 +4,7 @@
 `StudioControls` is a camera controller built on `AbstractControls` and Three.js's `OrbitControls`. It provides middle-button panning, orbit rotation with the left mouse button while fly-through mode is active, and direct camera look and movement while fly-through mode is active.
 
 * **Dependencies:** `three`, `three/addons/controls/OrbitControls.js`, `AbstractControls`
-* **Export Format:** `export default class StudioControls`
+* **Export Format:** `export default class StudioControls`, re-exported as `StudioControls` from `src/s-three-extensions/index.ts`
 
 ---
 
@@ -32,7 +32,7 @@ The mode is active while the Left `Alt` key (`AltLeft`) is held or while the rig
 
 Keyboard input is ignored when the event target is an `INPUT` or `TEXTAREA` element. The fly-through movement and arrow-key rotation are processed only while fly-through mode is active. The mode is cleared on window blur.
 
-`ThreeWorld.setControls()` can install and update a `StudioControls` instance automatically. This also supplies the key state used by `SceneController.isKeyPressed()`. `StudioControls` inherits `getKeyState()`, `flash()`, `dispose()`, and `update()` from `AbstractControls`.
+Assigning a `StudioControls` instance to `SceneController.controller` causes `SceneController.animate()` to update it automatically each frame and supplies the key state used by `SceneController.isKeyPressed()`. `StudioControls` also inherits `getKeyState()`, `flash()`, `dispose()`, `update()`, and the `mouseDownEvent` / `mouseMoveEvent` / `mouseUpEvent` callback setters from `AbstractControls`, forwarding pointer events to those callbacks before/during its own pointer handling.
 
 ---
 
@@ -83,7 +83,7 @@ Disables camera damping (inertia).
 ---
 
 ### `update(delta: number): void`
-Updates the controller state. Must be called every frame within the animation loop.
+Updates the controller state (inherited from `AbstractControls`). Must be called every frame within the animation loop (handled automatically when assigned to `SceneController.controller`).
 
 * **Parameters:**
   * `delta` (`number`): Elapsed time (in seconds) since the previous frame, used to calculate frame-rate-independent movement and rotation.
@@ -92,7 +92,7 @@ Updates the controller state. Must be called every frame within the animation lo
 ---
 
 ### `dispose(): void`
-Calls `removeEventListener` for the registered pointer, context-menu, keyboard, and blur listeners. The `pointerdown` listener was registered with capture enabled but is removed without that option, so the browser does not remove that listener; repeated construction and disposal can leave this handler attached to `dom`.
+Inherited from `AbstractControls`. Removes registered event listeners and clears pointer callback references. Note that the `pointerdown` listener was registered with `{ capture: true }` but is removed without that option, so repeated construction and disposal can leave this handler attached to `dom`.
 
 * **Parameters:** None
 * **Returns:** `void`
@@ -102,44 +102,44 @@ Calls `removeEventListener` for the registered pointer, context-menu, keyboard, 
 ## 6. Usage Example
 
 ```typescript
-import { SceneController } from "./SceneController";
-import StudioControls from "./controls/StudioControls";
-import ThreeWorld from "./ThreeWorld";
+import {
+    SceneController,
+    StudioControls,
+    ThreeWorld,
+} from "./src/s-three-extensions";
 
 class ControlledScene extends SceneController {
-  public start(): void {
-    // Set up scene objects here.
-  }
-
-  public update(_delta: number): void {
-    if (this.isKeyPressed("Space")) {
-      // Handle the pressed key.
+    public start(): void {
+        const controls = new StudioControls(this.camera, this.domElement);
+        controls.cameraSpeed = 8;
+        controls.rotateSpeed = 2.0;
+        controls.setDamping(0.1);
+        this.controller = controls;
     }
-  }
 
-  public override delete(): void {
-    // Release scene-owned resources here.
-  }
+    public update(_delta: number): void {
+        if (this.isKeyPressed("Space")) {
+            // Handle the pressed key.
+        }
+    }
+
+    public override delete(): void {
+        // Release scene-owned resources here.
+        // Note: ThreeWorld disposes this.controller on scene deletion transitions;
+        // call this.controller?.dispose() if tearing down via world.delete().
+    }
 }
 
 const canvas = document.querySelector<HTMLCanvasElement>("#app-canvas")!;
 const world = new ThreeWorld(canvas, window.innerWidth, window.innerHeight);
-world.setControls((camera, domElement) => {
-  const controls = new StudioControls(camera, domElement);
-  controls.cameraSpeed = 8;
-  controls.rotateSpeed = 2.0;
-  controls.setDamping(0.1);
-  return controls;
-});
 
 window.addEventListener("resize", () => {
-  world.resize(window.innerWidth, window.innerHeight);
+    world.resize(window.innerWidth, window.innerHeight);
 });
 
 world.addScene("controlled", new ControlledScene());
 await world.start("controlled");
 
 // On teardown:
-world.controls?.dispose();
 world.delete();
 ```

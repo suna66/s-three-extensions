@@ -1,56 +1,79 @@
 # `AbstractControls` クラス インターフェース仕様
 
 ## 1. 概要
-`AbstractControls` は、カメラコントロール向けに公開されている抽象基底クラスです。Three.js の `OrbitControls` インスタンスと押下中のキーコードを管理し、`StudioControls` などの派生クラスに共通の更新・破棄メソッドを提供します。
+`AbstractControls` はカメラコントロール用のエクスポートされた抽象基底クラスです。Three.jsの `OrbitControls` インスタンスを所有し、押下中のキーボードコードを追跡し、任意のポインターイベントコールバックを転送し、`BasicControls` や `StudioControls` などのサブクラス向けに共通の更新・破棄メソッドを提供します。
 
 * **依存関係:** `three`、`three/addons/controls/OrbitControls.js`
-* **エクスポート形式:** デフォルトエクスポート。`src/s-three-extensions/index.ts` から `AbstractControls` として再エクスポートされます。
+* **エクスポート形式:** デフォルトエクスポート（`export default abstract class AbstractControls`）。`src/s-three-extensions/index.ts` から `AbstractControls` として再エクスポートされます。`AbstractControls.ts` からは `MouseButtons` 型もエクスポートされます。
 
-このクラスを直接インスタンス化することはできません。派生クラスはキーボード更新処理とポインターハンドラーを実装し、マウスボタンのモードを設定したうえで、ハンドラーの初期化後に `setupEvents()` を呼び出す必要があります。
+このクラスは直接インスタンス化しません。サブクラスでは `keyEvent(delta: number)` を実装し、ハンドラーの初期化後に `setupEvents()` を呼び出す必要があります。
 
 ---
 
-## 2. コンストラクター
+## 2. エクスポート型
+
+### `MouseButtons`
+```typescript
+export type MouseButtons = {
+    LEFT: THREE.MOUSE | null;
+    MIDDLE: THREE.MOUSE | null;
+    RIGHT: THREE.MOUSE | null;
+};
+```
+
+---
+
+## 3. コンストラクター
 
 ### `constructor(camera: THREE.Camera, dom: HTMLElement)`
-`OrbitControls` インスタンスを作成して初期モードを設定し、カメラのワールド座標上で前方1単位の位置にターゲットを設定します。
+`OrbitControls` インスタンスを作成し、`setupControlOptions()` によって初期モードを設定し、カメラ前方のワールド空間上1単位の位置にターゲットを設定します。
 
-* **パラメーター:** `camera` は操作対象のカメラ、`dom` は `OrbitControls` が使用する要素です。
+* **パラメーター:** `camera` は制御対象のカメラ、`dom` は `OrbitControls` が使用する要素です。
 
 ---
 
-## 3. メソッド
+## 4. プロパティ（セッター）
+
+| プロパティ名 | 型 | アクセス | 説明 |
+| :--- | :--- | :--- | :--- |
+| `mouseDownEvent` | `(e: PointerEvent) => void` | 書き込み専用 | `dom` 上での `pointerdown` 時に呼ばれる任意のコールバックです。 |
+| `mouseMoveEvent` | `(e: PointerEvent) => void` | 書き込み専用 | `dom` 上での `pointermove` 時に呼ばれる任意のコールバックです。 |
+| `mouseUpEvent` | `(e: PointerEvent) => void` | 書き込み専用 | `window` 上での `pointerup` 時に呼ばれる任意のコールバックです。 |
+
+---
+
+## 5. メソッド
 
 ### `getKeyState(key: string): boolean`
-指定した `KeyboardEvent.code` が押されているかを返します。イベント対象が `INPUT` または `TEXTAREA` の場合、`keydown` の入力は無視されます。ウィンドウがフォーカスを失ったとき、および `flash()` の呼び出し時にキー状態がクリアされます。
+指定した `KeyboardEvent.code` が現在押されているかを返します。イベントターゲットが `INPUT` または `TEXTAREA` の場合、`keydown` 時のキーボード入力は無視されます。`Alt` キーのブラウザー既定動作は `keydown` と `keyup` で抑止されます。キー状態はウィンドウの `blur` 時および `flash()` 呼び出し時にクリアされます。
 
 ### `flash(): void`
-追跡中のキー状態をクリアし、`OrbitControls` のマウスボタン割り当てを派生クラスの既定モードに戻します。
+追跡中のキー状態をクリアし、`OrbitControls` のマウスボタン割り当てをサブクラスの `defaultMode()` に戻します。
 
 ### `update(delta: number): void`
-派生クラスの `keyEvent(delta)` フックを呼び出し、基底クラスが保持する `OrbitControls` を更新します。アプリケーションまたは所有する `ThreeWorld` が毎フレーム呼び出す必要があります。
+サブクラスの `keyEvent(delta)` フックを呼び出し、内部の `OrbitControls` を更新します。アプリケーションまたは所有元の `SceneController` が毎フレーム呼び出す必要があります。
 
 ### `dispose(): void`
-`setupEvents()` が登録したイベントリスナーを削除します。`pointerdown` リスナーはキャプチャ有効で登録されますが、解除時にはキャプチャオプションを指定しないため、残る場合があります。このメソッドは `OrbitControls.dispose()` を呼び出しません。
+`setupEvents()` で登録したイベントリスナーを削除し、`mouseDownEvent`、`mouseMoveEvent`、`mouseUpEvent` の参照を `null` にクリアします。なお、`pointerdown` リスナーは `{ capture: true }` で登録されていますが、削除時は capture オプションなしで解除されるため、リスナーが残る場合があります。このメソッドは `OrbitControls.dispose()` を呼び出しません。
 
 ---
 
-## 4. 派生クラスのフック
+## 6. サブクラスフック
 
 | フック | 説明 |
 | :--- | :--- |
-| `defaultMode(): MouseButtons` | `OrbitControls.mouseButtons` の既定割り当てを返します。初期化時と `flash()` の呼び出し時に使われます。 |
-| `setupControlOptions(): void` | 初期マウスボタン割り当てとオービットターゲットを設定します。 |
-| `setupEvents(): void` | 派生クラスのポインターハンドラーと、共通のキーボード・フォーカス喪失・コンテキストメニューハンドラーを登録します。 |
-| `keyEvent(delta: number): void` | フレームごとのキーボード動作を実装する抽象フックです。 |
-| `handleMouseDown(e: PointerEvent): void` | 抽象ポインターダウンハンドラーです。 |
-| `handleMouseMove(e: PointerEvent): void` | 抽象ポインター移動ハンドラーです。 |
-| `handleMouseUp(e: PointerEvent): void` | 抽象ポインターアップハンドラーです。 |
+| `defaultMode(): MouseButtons` | 既定の `OrbitControls.mouseButtons` 割り当てを返します。初期化時と `flash()` 実行時に使用されます。 |
+| `setupControlOptions(): void` | マウス割り当てとオービットターゲットの初期設定を行います。 |
+| `setupEvents(): void` | ポインター（`dom` 上の `pointerdown` capture、`pointermove`、`contextmenu`、`window` 上の `pointerup`）、キーボード、および `blur` ハンドラーを登録します。 |
+| `keyEvent(delta: number): void` | 毎フレームのキーボード処理用抽象フックです。 |
+| `handleMouseDown(e: PointerEvent): void` | ポインター押下ハンドラーです。`mouseDownEvent` が設定されていれば呼び出します（サブクラスでオーバーライド可能）。 |
+| `handleMouseMove(e: PointerEvent): void` | ポインター移動ハンドラーです。`mouseMoveEvent` が設定されていれば呼び出します（サブクラスでオーバーライド可能）。 |
+| `handleMouseUp(e: PointerEvent): void` | ポインター解放ハンドラーです。`mouseUpEvent` が設定されていれば呼び出します（サブクラスでオーバーライド可能）。 |
 
-派生クラスは保護プロパティ `mouseButtons` を使って、基底クラスの `OrbitControls.mouseButtons` 割り当てを変更できます。
+サブクラスは保護された `mouseButtons` プロパティを設定して、内部の `OrbitControls.mouseButtons` 割り当てを変更することもできます。
 
 ---
 
-## 5. 使用方法
+## 7. 使用方法
 
-具象実装の `StudioControls` を `ThreeWorld.setControls()` に渡すと、ワールドが毎フレーム更新し、キー状態を `SceneController.isKeyPressed()` から利用できます。使用例は [StudioControls](./studiocontrols_specification.md) を参照してください。
+具象実装（`StudioControls` または `BasicControls`）を `SceneController.controller` に代入すると、シーンが毎フレーム自動的に更新し、`SceneController.isKeyPressed()` からキー状態を読み取れるようになります。完全な使用例は [StudioControls](./studiocontrols_specification.md) および [BasicControls](./basiccontrols_specification.md) を参照してください。

@@ -11,16 +11,16 @@
 ## 2. 初期化と破棄
 
 ### `static async create(gravity?): Promise<PhysicsWorld>`
-RapierのWebAssemblyモジュールを初期化してから、物理ワールドを作成します。アプリケーション側でRapierを初期化済みでない場合は、このファクトリーを使用してください。
+RapierのWebAssemblyモジュールを初期化してから、物理ワールドを作成します。コンストラクターは `private` のため、`PhysicsWorld` インスタンスの作成には必ずこのファクトリーを使用してください。
 
 * **パラメーター:** `gravity` は省略可能な `{ x, y, z }` ベクトルです。既定値は `{ x: 0, y: -9.81, z: 0 }` です。
 * **戻り値:** 初期化済みの `PhysicsWorld`
 
-### `constructor(gravity?)`
-指定した重力で物理ワールドを作成します。`RAPIER.init()` は呼び出しません。Rapierがまだ初期化されていない場合は `PhysicsWorld.create()` を使用してください。
-
 ### `disposed: boolean`
 `dispose()` が呼び出されたかどうかを示す読み取り専用フラグです。
+
+### `debugRenderer: { vertices: Float32Array; colors: Float32Array }`
+デバッグ可視化用に、Rapier の `world.debugRender()` から線分の頂点座標とRGBAカラーを返す読み取り専用ゲッターです。
 
 ### `dispose(): void`
 イベントキューとRapierワールドを破棄し、オブジェクトのバインディング、コライダーメタデータ、衝突リスナーをクリアします。複数回呼び出しても結果は変わりません。不要になった時点で破棄し、その後は使用しないでください。
@@ -43,6 +43,9 @@ RapierのWebAssemblyモジュールを初期化してから、物理ワールド
 
 ### `removeObject(object: THREE.Object3D): void`
 登録済みの剛体とコライダーを削除します。オブジェクトが登録されていない場合は何もしません。Three.jsシーンからオブジェクトを削除したり、ジオメトリやマテリアルを破棄したりはしません。
+
+### `getPhysicBodyHandler(obj: THREE.Object3D): PhysicsBodyHandle | null`
+`obj` に対して登録されている `PhysicsBodyHandle` を返します。登録されていない場合は `null` を返します。
 
 ---
 
@@ -84,7 +87,7 @@ Rapierのタイムステップを `dt` に設定してシミュレーション�
 
 * `BodyType`: `"dynamic"`、`"fixed"`、`"kinematicPosition"`、`"kinematicVelocity"` のいずれか
 * `ColliderShapeSpec`: `autoBox`、`autoSphere`、`box`、`sphere`、`capsule`、`convexHull`、`trimesh` のいずれか
-* `ColliderOptions`: コライダー形状と、任意のセンサー指定、オフセット、ワールドスケール適用、タグ、摩擦、反発係数、密度
+* `ColliderOptions`: コライダー形状と、任意のセンサー指定（`isSensor`）、衝突イベント有効化フラグ（`activeEvent`、`true` のとき `RAPIER.ActiveEvents.COLLISION_EVENTS` を有効化）、オフセット、ワールドスケール適用、タグ、摩擦、反発係数、密度
 * `RigidBodyOptions`: 剛体タイプ、初期コライダー一覧、任意の回転ロック、線形・角減衰
 * `CollisionEventPayload`: 2つのコライダーオブジェクト、それぞれの任意のタグ、衝突が開始または終了したかを示す情報
 * `ColliderMeta`: コライダーオブジェクト、任意のタグ、センサーかどうかを示す情報。衝突コールバックとの関連付けに内部で使用されます。

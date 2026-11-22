@@ -11,16 +11,16 @@
 ## 2. Initialization and Disposal
 
 ### `static async create(gravity?): Promise<PhysicsWorld>`
-Initializes Rapier's WebAssembly module, then creates a physics world. Use this factory before creating a world unless the application has already initialized Rapier.
+Initializes Rapier's WebAssembly module, then creates a physics world. The constructor is `private`, so always use this factory to create a `PhysicsWorld` instance.
 
 * **Parameters:** `gravity` is an optional `{ x, y, z }` vector; it defaults to `{ x: 0, y: -9.81, z: 0 }`.
 * **Returns:** An initialized `PhysicsWorld`.
 
-### `constructor(gravity?)`
-Creates a physics world with the given gravity. It does not call `RAPIER.init()`; prefer `PhysicsWorld.create()` when initialization has not already been performed.
-
 ### `disposed: boolean`
 Read-only flag indicating whether `dispose()` has been called.
+
+### `debugRenderer: { vertices: Float32Array; colors: Float32Array }`
+Read-only getter returning the line-segment vertex positions and RGBA colors from Rapier's `world.debugRender()` for debug visualization.
 
 ### `dispose(): void`
 Disposes the event queue and Rapier world, and clears object bindings, collider metadata, and collision listeners. Repeated calls have no effect. Dispose the world when it is no longer needed; do not use it afterward.
@@ -43,6 +43,9 @@ Removes the rigid body's current colliders and creates replacements from `specs`
 
 ### `removeObject(object: THREE.Object3D): void`
 Removes the registered body's colliders and rigid body. Does nothing if the object is not registered. This does not remove the object from the Three.js scene or dispose its geometry/materials.
+
+### `getPhysicBodyHandler(obj: THREE.Object3D): PhysicsBodyHandle | null`
+Returns the `PhysicsBodyHandle` registered for `obj`, or `null` if no body is registered for it.
 
 ---
 
@@ -84,7 +87,7 @@ The following types are exported from the package barrel:
 
 * `BodyType`: `"dynamic"`, `"fixed"`, `"kinematicPosition"`, or `"kinematicVelocity"`.
 * `ColliderShapeSpec`: `autoBox`, `autoSphere`, `box`, `sphere`, `capsule`, `convexHull`, or `trimesh`.
-* `ColliderOptions`: collider shape plus optional sensor flag, offset, world-scale behavior, tag, friction, restitution, and density.
+* `ColliderOptions`: collider shape plus optional sensor flag (`isSensor`), collision event flag (`activeEvent`, which enables `RAPIER.ActiveEvents.COLLISION_EVENTS` when `true`), offset, world-scale behavior, tag, friction, restitution, and density.
 * `RigidBodyOptions`: body type, initial collider list, optional rotation locks, and linear/angular damping.
 * `CollisionEventPayload`: the two collider objects, optional tags, and whether the collision started or ended.
 * `ColliderMeta`: collider object, optional tag, and sensor flag. Used internally to associate colliders with collision callbacks.

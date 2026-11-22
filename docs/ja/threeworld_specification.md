@@ -1,7 +1,7 @@
 # `ThreeWorld` クラス インターフェース仕様
 
 ## 1. 概要
-`ThreeWorld` は透視カメラ、WebGPUレンダラー、フレームタイマー、任意のカメラコントロール、およびキーで管理される `SceneController` インスタンスのライフサイクルを管理します。各コントローラーは個別の `THREE.Scene` を所有し、キーボード状態は設定されたコントロールから提供されます。
+`ThreeWorld` は透視カメラ、WebGPUレンダラー、フレームタイマー、およびキーで管理される `SceneController` インスタンスのライフサイクルを管理します。各コントローラーは個別の `THREE.Scene`、カメラコントロール、および任意の `PhysicsWorld` を所有します。
 
 * **依存関係:** `three/webgpu`、`SceneController`
 * **エクスポート形式:** `export default class ThreeWorld`。`src/s-three-extensions/index.ts` から `ThreeWorld` として再エクスポートされます。
@@ -36,88 +36,82 @@
 | `camera` | `THREE.PerspectiveCamera` | 読み取り専用 | 内部の透視カメラです。 |
 | `renderer` | `THREE.WebGPURenderer` | 読み取り専用 | 内部のWebGPUレンダラーです。 |
 | `domElement` | `HTMLCanvasElement` | 読み取り専用 | レンダラーのキャンバス（`renderer.domElement`）です。 |
-| `controls` | `AbstractControls \| null` | 読み取り専用 | 設定されたカメラコントロールです。未設定の場合は `null` です。 |
 
 ---
 
 ## 5. メソッド
 
 ### `addScene(key: string, scene: SceneController): void`
-コントローラーをこのワールドで初期化し、`key` に登録します。
+コントローラーをこのワールドで初期化し（`scene.init(this)`）、`key` に登録します。
 
 ### `loadScene(key: string, isDelete: boolean = true): boolean`
-登録済みコントローラーへの遷移を要求します。`key` が登録されていない場合は `false` を返します。遷移先コントローラーは直ちに再開され、次のアニメーションフレームでアクティブになり、押下中のキーセットがクリアされます。`isDelete` が `true` の場合、遷移元コントローラーは削除されレジストリからも取り除かれます。`false` の場合は一時停止され、後で再開できます。
+登録済みコントローラーへの遷移を要求します。`key` が登録されていない場合は `false` を返します。遷移先コントローラーは直ちに再開され（`resume()`）、次のアニメーションフレームでアクティブになります。`isDelete` が `true` の場合、遷移元コントローラーは削除（`delete()`）および破棄（`dispose()`）され、レジストリからも取り除かれます。`false` の場合は一時停止（`suspend()`）され、後で再開できます。
 
 ### `setCameraPosition(x: number, y: number, z: number): void`
 カメラのワールド座標上の位置を設定します。
-
-### `setControls(func: (camera: THREE.Camera, domElement: HTMLCanvasElement) => AbstractControls): void`
-指定したファクトリー関数でカメラコントロールを作成して保存します。コントロールは各フレームで、アクティブなシーンの `update()` より前に更新されます。シーンから入力状態を利用する場合は、ワールドの開始前に設定してください。既存のコントロールを置き換えても、以前のインスタンスは自動的に破棄されません。
 
 ### `resize(width: number, height: number): void`
 カメラのアスペクト比と投影行列を更新し、レンダラーのサイズも更新します。
 
 ### `async start(startScene: string): Promise<void>`
-レンダラーを初期化し、`startScene` に登録されたコントローラーを選択して、その `start()` を呼び出し、描画ループを設定します。指定キーにコントローラーが登録されていない場合、描画ループを開始せずに戻ります。各フレームではタイマーを更新し、前回フレームからの経過秒数 `delta` を最大 `0.1` 秒に制限して、保留中のシーン遷移を適用します。設定済みのコントロールを更新してから、アクティブなコントローラーの `update(delta)` を呼び出し、内部カメラでコントローラーの `scene` を描画します。
+レンダラーを初期化し、`startScene` に登録されたコントローラーを選択してその `start()` メソッドを呼び出し、レンダーループを開始します。キーに対応するコントローラーが登録されていない場合、ループを開始せずに終了します。各フレームではタイマーを更新し、経過時間 `delta` を最大 `0.1` 秒にクランプした上で、保留中のシーン遷移を適用し、アクティブなコントローラーの `animate(delta)` を呼び出してから、その `scene` を内部カメラで描画します。
 
 ### `delete(): void`
-インスタンスを破棄済みにし、アクティブなコントローラーがあればその `delete()` を呼び出し、タイマーを切断・破棄します。設定済みのコントロールとレンダラーはこのメソッドでは明示的に破棄されないため、必要に応じてコントロールを別途破棄してください。
+インスタンスを破棄済みとしてマークし、アクティブなコントローラーが存在すればその `delete()` を呼び出し、タイマーを切断して破棄します。レンダラーはこのメソッドでは明示的に破棄されません。
 
 ---
 
-## 6. `SceneController` との関係
-`SceneController` は `THREE.Scene` を所有し、通常は `addScene()` によって呼び出される `init(world)` を通じて `ThreeWorld` インスタンスを受け取ります。シーン、カメラ、キャンバスを公開し、`start(): void` と `update(delta: number): void` の実装を要求します。コントローラーは保護メソッド `loadScene()` でキーを指定した遷移を要求し、`isKeyPressed()` で設定済みコントロールのキー状態を確認できます。`addMesh()` や `removeMesh()` などのメッシュ補助メソッドはコントローラーに属します。
+## 6. SceneController との関係
+`SceneController` は `THREE.Scene` を所有し、通常 `addScene()` から呼び出される `init(space)` を通じて `ThreeWorld` インスタンスを受け取ります。シーン、カメラ、キャンバスを公開し、`start(): void` と `update(delta: number): void` の実装を要求します。コントローラーは自身の `controller`（`AbstractControls`）や任意の `physicsWorld`（`PhysicsWorld`）を管理し、保護された `loadScene()` および `addScene()` メソッドを通じてキー付きシーン遷移や新規シーン登録を行えます。
 
 ---
 
 ## 7. 使用例
 
 ```typescript
-import * as THREE from "three/webgpu";
-import ThreeWorld from "./ThreeWorld";
-import { SceneController } from "./SceneController";
-import StudioControls from "./controls/StudioControls";
+import * as THREE from "three";
+import {
+    SceneController,
+    SceneObject,
+    StudioControls,
+    ThreeWorld,
+} from "./src/s-three-extensions";
 
 class SampleScene extends SceneController {
-    private cube: THREE.Mesh | null = null;
+    private cube: SceneObject | null = null;
 
     public start(): void {
-        const geometry = new THREE.BoxGeometry(1, 1, 1);
-        const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
-        this.cube = new THREE.Mesh(geometry, material);
+        this.controller = new StudioControls(this.camera, this.domElement);
+        this.cube = new SceneObject(() => {
+            const geometry = new THREE.BoxGeometry(1, 1, 1);
+            const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+            return new THREE.Mesh(geometry, material);
+        });
         this.addMesh(this.cube);
     }
 
     public update(delta: number): void {
-        if (!this.cube) return;
-        this.cube.rotation.x += delta;
-        this.cube.rotation.y += delta;
+        if (!this.cube?.mesh) return;
+        this.cube.mesh.rotation.x += delta;
+        this.cube.mesh.rotation.y += delta;
     }
 
     public override delete(): void {
-        if (this.cube) {
-            this.removeMesh(this.cube);
-            this.cube.geometry.dispose();
-            const materials = Array.isArray(this.cube.material)
-                ? this.cube.material
-                : [this.cube.material];
-            materials.forEach((material) => material.dispose());
-        }
+        this.removeAllMesh();
+        this.cube?.dispose(true);
     }
 }
 
 const canvas = document.querySelector<HTMLCanvasElement>("#app-canvas")!;
 const world = new ThreeWorld(canvas, window.innerWidth, window.innerHeight);
-world.setControls((camera, domElement) => new StudioControls(camera, domElement));
 world.addScene("sample", new SampleScene());
 
-window.addEventListener("resize", () => {
-    world.resize(window.innerWidth, window.innerHeight);
-});
+const handleResize = () => world.resize(window.innerWidth, window.innerHeight);
+window.addEventListener("resize", handleResize);
 
 await world.start("sample");
 
-// 終了時:
-world.controls?.dispose();
+// 破棄時:
+window.removeEventListener("resize", handleResize);
 world.delete();
 ```
