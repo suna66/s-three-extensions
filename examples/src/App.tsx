@@ -112,6 +112,17 @@ class SubScene extends SceneController {
             }),
         );
 
+        this._box.addUpdateFunction((_delta, _mesh, body) => {
+            if (this.isKeyPressed("KeyZ")) {
+                if (body) {
+                    body.rigidBody.applyImpulse(
+                        new THREE.Vector3(0, 1.0, 0),
+                        true,
+                    );
+                }
+            }
+        });
+
         this.collision = (event: CollisionEventPayload) => {
             console.log(event);
         };
